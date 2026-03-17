@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Initial colcon workspace skeleton with 5 ament_python packages
 - Repository structure: `src/`, `hardware/`, `docs/`, `data/`
 - CLAUDE.md coding standards and AGENT_GIT_GUIDE.md for AI assistants
+- V1 launcher prototype CAD — plunger, tube, barrel-to-storage adapter, servo mount, spur gear (`hardware/launcher/v1/`)
 - `amr_nav` package: custom navigation replacing Nav2 stack
   - `pathfinding.py`: multi-source Dijkstra target finding, A* with wall
     penalty, cluster-to-cluster waypoint reduction
