@@ -26,7 +26,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            # 'mission_controller = amr_bringup.mission_controller:main',
+            'mission_controller = amr_bringup.mission_controller:main',
         ],
     },
 )

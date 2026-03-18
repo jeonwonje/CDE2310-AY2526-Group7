@@ -27,9 +27,9 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            # 'frontier_detector = amr_navigation.frontier_detector:main',
-            # 'exploration_manager = amr_navigation.exploration_manager:main',
-            # 'coverage_monitor = amr_navigation.coverage_monitor:main',
+            'frontier_detector = amr_navigation.frontier_detector:main',
+            'exploration_manager = amr_navigation.exploration_manager:main',
+            'coverage_monitor = amr_navigation.coverage_monitor:main',
         ],
     },
 )

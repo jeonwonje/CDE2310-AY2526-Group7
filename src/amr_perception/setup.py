@@ -24,7 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            # 'apriltag_detector = amr_perception.apriltag_detector:main',
+            'apriltag_detector = amr_perception.apriltag_detector:main',
         ],
     },
 )

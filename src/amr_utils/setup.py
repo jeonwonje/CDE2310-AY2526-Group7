@@ -24,12 +24,12 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            # 'r2auto_nav = amr_utils.r2auto_nav:main',
-            # 'r2mover = amr_utils.r2mover:main',
-            # 'r2moverotate = amr_utils.r2moverotate:main',
-            # 'r2scanner = amr_utils.r2scanner:main',
-            # 'r2occupancy = amr_utils.r2occupancy:main',
-            # 'r2occupancy2 = amr_utils.r2occupancy2:main',
+            'r2auto_nav = amr_utils.r2auto_nav:main',
+            'r2mover = amr_utils.r2mover:main',
+            'r2moverotate = amr_utils.r2moverotate:main',
+            'r2scanner = amr_utils.r2scanner:main',
+            'r2occupancy = amr_utils.r2occupancy:main',
+            'r2occupancy2 = amr_utils.r2occupancy2:main',
         ],
     },
 )

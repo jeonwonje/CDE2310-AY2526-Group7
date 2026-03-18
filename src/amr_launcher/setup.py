@@ -24,7 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            # 'delivery_sequencer = amr_launcher.delivery_sequencer:main',
+            'delivery_sequencer = amr_launcher.delivery_sequencer:main',
         ],
     },
 )
