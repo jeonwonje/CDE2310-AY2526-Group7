@@ -26,7 +26,7 @@ setup(
     entry_points={
         'console_scripts': [
             'auto_nav = amr_nav.auto_nav:main',
-            'coverage_monitor = amr_nav.coverage_monitor:main',
+            'coverage_monitor = amr_nav.auto_nav:main_coverage',
         ],
     },
 )

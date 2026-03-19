@@ -4,7 +4,7 @@
 import numpy as np
 import pytest
 
-from amr_nav.pathfinding import (
+from amr_nav.auto_nav import (
     occupancy_to_grid,
     find_next_target,
     astar_wall_penalty,
