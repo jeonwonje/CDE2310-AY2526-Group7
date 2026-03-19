@@ -1,7 +1,5 @@
 slam_toolbox:
   ros__parameters:
-    use_sim_time: false
-
     solver_plugin: solver_plugins::CeresSolver
     ceres_linear_solver: SPARSE_NORMAL_CHOLESKY
     ceres_preconditioner: SCHUR_JACOBI
