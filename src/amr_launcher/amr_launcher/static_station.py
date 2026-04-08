@@ -25,6 +25,9 @@ class ShooterService(Node):
         try:
             self.get_logger().info('Firing sequence started')
 
+            # "setup" for firing - this will not launch 
+            self.fire_round()
+
             self.get_logger().info('Round 1/3')
             self.fire_round()
             time.sleep(4)
