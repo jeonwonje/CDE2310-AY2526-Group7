@@ -32,6 +32,10 @@ setup(
             'search_server = CDE2310_AMR_Trial_Run.search_stations:main',
             'static_station = CDE2310_AMR_Trial_Run.static_station:main',
             'apriltag_detector = CDE2310_AMR_Trial_Run.apriltag_detector:main',
+            'docking_server = CDE2310_AMR_Trial_Run.docker:main',
+            'delivery_server = CDE2310_AMR_Trial_Run.delivery_server:main',
+            'launcher_node = CDE2310_AMR_Trial_Run.launcher_node:main',
+            'rpi_shooter_node = CDE2310_AMR_Trial_Run.rpi_shooter_node:main',
         ],
     },
 )

@@ -32,6 +32,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `sim_exploration.launch.py`: Gazebo sim launch (no Nav2)
   - `mission.launch.py`: full warehouse mission launch (no Nav2)
   - Unit tests for all pathfinding algorithms (29 tests)
+- G2 systems engineering documentation (`docs/reports/`):
+  - Requirements specification with functional, non-functional, and constraint requirements
+  - Concept of Operations (ConOps) with mission phases and operational scenarios
+  - High-level design with two-machine architecture and package decomposition
+  - Subsystem design for navigation, perception, docking, delivery, and coordination
+  - Interface control document with full ROS 2 topic/service/action catalogue
+  - Software development plan with branching, build, and dependency management
+  - Testing documentation with 29 unit tests, integration plan, and FAT checklist
 
 ### Changed
 - Consolidated 5 packages → 3 (`amr_nav`, `amr_perception`, `amr_launcher`)
