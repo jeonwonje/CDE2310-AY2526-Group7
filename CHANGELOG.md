@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- `auto_explore_v2` package: BFS frontier detection with clustering, scored goal posting via Nav2 (Kumaresan)
+- `CDE2310_AMR_Trial_Run` package: mission coordinator state machine, search stations, static station, AprilTag detector (Kumaresan)
+- Cartographer SLAM config, minimal Nav2 params, full mission launch file (Kumaresan)
 - Initial colcon workspace skeleton with 5 ament_python packages
 - Repository structure: `src/`, `hardware/`, `docs/`, `data/`
 - CLAUDE.md coding standards and AGENT_GIT_GUIDE.md for AI assistants

@@ -1,0 +1,337 @@
+# ============================================================
+# Nav2 Parameters for TurtleBot3 Burger
+# ROS 2 Humble / Iron / Jazzy compatible
+#
+# TUNING GUIDE:
+#   [TUNE] = actively tune this value for your environment
+#   [FIXED] = matches Burger hardware limits, don't exceed
+#   [ADVANCED] = only change if you have a specific issue
+# ============================================================
+
+amcl:
+  ros__parameters:
+    use_sim_time: False
+    alpha1: 0.2          # [TUNE] Noise from rotation in rotation (odometry error)
+    alpha2: 0.2          # [TUNE] Noise from translation in rotation
+    alpha3: 0.2          # [TUNE] Noise from translation in translation
+    alpha4: 0.2          # [TUNE] Noise from rotation in translation
+    alpha5: 0.2          # [ADVANCED] Only used with omni drive
+    base_frame_id: "base_footprint"
+    beam_skip_distance: 0.5
+    beam_skip_error_threshold: 0.9
+    beam_skip_threshold: 0.3
+    do_beamskip: false
+    global_frame_id: "map"
+    lambda_short: 0.1
+    laser_likelihood_max_dist: 2.0
+    laser_max_range: 3.5   # [FIXED] LDS-01 max reliable range (meters)
+    laser_min_range: 0.12  # [FIXED] LDS-01 min range (meters)
+    laser_model_type: "likelihood_field"
+    max_beams: 60
+    max_particles: 2000    # [TUNE] Lower (500-1000) if CPU is overloaded on Pi
+    min_particles: 500     # [TUNE] Raise if localization is unstable
+    odom_frame_id: "odom"
+    pf_err: 0.05
+    pf_z: 0.99
+    recovery_alpha_fast: 0.0
+    recovery_alpha_slow: 0.0
+    resample_interval: 1
+    robot_model_type: "nav2_amcl::DifferentialMotionModel"
+    save_pose_rate: 0.5
+    sigma_hit: 0.2
+    tf_broadcast: true
+    transform_tolerance: 1.0
+    update_min_a: 0.2      # [TUNE] Min rotation (rad) before particle update; lower = more updates
+    update_min_d: 0.25     # [TUNE] Min distance (m) before particle update; lower = more updates
+    z_hit: 0.5
+    z_max: 0.05
+    z_rand: 0.5
+    z_short: 0.05
+    scan_topic: scan
+
+bt_navigator:
+  ros__parameters:
+    use_sim_time: False
+    global_frame: map
+    robot_base_frame: base_link
+    odom_topic: /odom
+    bt_loop_duration: 10
+    default_server_timeout: 20
+    navigators: ["navigate_to_pose", "navigate_through_poses"]
+    navigate_to_pose:
+      plugin: "nav2_bt_navigator::NavigateToPoseNavigator"
+    navigate_through_poses:
+      plugin: "nav2_bt_navigator::NavigateThroughPosesNavigator"
+    error_code_names:
+      - compute_path_error_code
+      - follow_path_error_code
+
+controller_server:
+  ros__parameters:
+    use_sim_time: False
+    controller_frequency: 20.0  # [TUNE] Hz; 10-20 is typical for Burger
+    min_x_velocity_threshold: 0.001
+    min_y_velocity_threshold: 0.5
+    min_theta_velocity_threshold: 0.001
+    failure_tolerance: 0.3
+    progress_checker_plugins: ["progress_checker"]
+    goal_checker_plugins: ["general_goal_checker"]
+    controller_plugins: ["FollowPath"]
+
+    # --- Progress Checker ---
+    progress_checker:
+      plugin: "nav2_controller::SimpleProgressChecker"
+      required_movement_radius: 0.5
+      movement_time_allowance: 10.0
+
+    # --- Goal Checker ---
+    general_goal_checker:
+      stateful: True
+      plugin: "nav2_controller::SimpleGoalChecker"
+      xy_goal_tolerance: 0.25   # [TUNE] Distance to goal (m) before stopping; tighten to 0.10 for precision
+      yaw_goal_tolerance: 0.25  # [TUNE] Heading tolerance (rad); tighten to 0.10 for precise final heading
+
+    # --- DWB Local Planner ---
+    FollowPath:
+      plugin: "dwb_core::DWBLocalPlanner"
+      debug_trajectory_details: True
+
+      # Velocity limits — constrained to Burger hardware
+      min_vel_x: 0.0
+      max_vel_x: 0.50        # [FIXED] Burger max linear speed (m/s)
+      max_vel_y: 0.0           # [FIXED] Differential drive — no strafe
+      min_vel_y: 0.0
+      max_vel_theta: 0.50    # [TUNE] Max rotation speed (rad/s); 1.0–2.84 range
+      min_speed_xy: 0.0
+      max_speed_xy: 0.60      # [FIXED] Match max_vel_x
+      min_speed_theta: 0.0
+
+      # Acceleration limits
+      acc_lim_x: 2.5           # [TUNE] Linear acceleration; lower = smoother but slower response
+      acc_lim_y: 0.0
+      acc_lim_theta: 3.2       # [TUNE] Angular acceleration
+      decel_lim_x: -2.5        # [TUNE] Linear deceleration; make symmetric with acc_lim_x
+      decel_lim_theta: -3.2
+
+      # Trajectory simulation
+      vx_samples: 20           # [TUNE] Linear velocity samples; more = better paths, more CPU
+      vy_samples: 5
+      vtheta_samples: 40       # [TUNE] Angular velocity samples; more = better turning choices
+      sim_time: 1.7            # [TUNE] Seconds to simulate ahead; increase (up to 3.0) to fix corner-cutting
+      linear_granularity: 0.05
+      angular_granularity: 0.025
+      transform_tolerance: 0.2
+      xy_goal_tolerance: 0.25
+      trans_stopped_velocity: 0.25
+
+      # Trajectory scoring critics
+      short_circuit_trajectory_filter: true
+      stateful: True
+      critics:
+        ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
+
+      # --- Critic Scales (TUNE these to shape behavior) ---
+      BaseObstacle.scale: 0.02     # Cost for getting close to obstacles
+      PathAlign.scale: 32.0        # [TUNE] Higher = robot follows planned path more strictly
+      PathAlign.forward_point_distance: 0.1
+      GoalAlign.scale: 24.0        # [TUNE] Higher = robot aligns to goal heading sooner
+      GoalAlign.forward_point_distance: 0.1
+      PathDist.scale: 32.0         # [TUNE] Higher = robot stays close to planned path
+      GoalDist.scale: 24.0         # [TUNE] Higher = robot prioritizes reaching goal over path fidelity
+      RotateToGoal.scale: 32.0     # [TUNE] Higher = robot rotates in place to face goal before moving
+      RotateToGoal.slowing_factor: 5.0
+      RotateToGoal.lookahead_time: -1.0
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      update_frequency: 5.0
+      publish_frequency: 2.0
+      global_frame: odom
+      robot_base_frame: base_link
+      use_sim_time: False
+      rolling_window: true
+      width: 3             # [TUNE] Local map width (m); increase to 4-5 for larger spaces
+      height: 3            # [TUNE] Local map height (m)
+      resolution: 0.05
+      robot_radius: 0.12   # [TUNE] Burger base is ~0.105m; add small safety margin
+      plugins: ["voxel_layer", "inflation_layer"]
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 4.0  # [TUNE] Higher = steeper cost dropoff from obstacles (robot hugs center more)
+        inflation_radius: 0.18 # [TUNE] Keep > robot_radius; increase to keep further from walls
+      voxel_layer:
+        plugin: "nav2_costmap_2d::VoxelLayer"
+        enabled: True
+        publish_voxel_map: True
+        origin_z: 0.0
+        z_resolution: 0.05
+        z_voxels: 16
+        max_obstacle_height: 2.0
+        mark_threshold: 0
+        observation_sources: scan
+        scan:
+          topic: /scan
+          max_obstacle_height: 2.0
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          raytrace_max_range: 3.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 2.5
+          obstacle_min_range: 0.0
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        map_subscribe_transient_local: True
+      always_send_full_costmap: True
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      update_frequency: 1.0
+      publish_frequency: 1.0
+      global_frame: map
+      robot_base_frame: base_link
+      use_sim_time: False
+      robot_radius: 0.12   # [TUNE] Must match local_costmap robot_radius
+      resolution: 0.05
+      track_unknown_space: true
+      plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: True
+        observation_sources: scan
+        scan:
+          topic: /scan
+          max_obstacle_height: 2.0
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          raytrace_max_range: 3.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 2.5
+          obstacle_min_range: 0.0
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        map_subscribe_transient_local: True
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 4.0  # [TUNE] Higher = steeper cost dropoff from obstacles (robot hugs center more)
+        inflation_radius: 0.18 # [TUNE] Keep > robot_radius; increase to keep further from walls
+      always_send_full_costmap: True
+
+map_server:
+  ros__parameters:
+    use_sim_time: False
+    yaml_filename: ""
+
+map_saver:
+  ros__parameters:
+    use_sim_time: False
+    save_map_timeout: 5.0
+    free_thresh_default: 0.25
+    occupied_thresh_default: 0.65
+    map_subscribe_transient_local: True
+
+planner_server:
+  ros__parameters:
+    expected_planner_frequency: 20.0
+    use_sim_time: False
+    planner_plugins: ["GridBased"]
+    GridBased:
+      plugin: "nav2_navfn_planner/NavfnPlanner"
+      tolerance: 0.5       # [TUNE] How close to goal a valid plan endpoint must be (m)
+      use_astar: false     # [TUNE] Set true for faster but less optimal paths in large maps
+      allow_unknown: true
+
+smoother_server:
+  ros__parameters:
+    use_sim_time: False
+    smoother_plugins: ["simple_smoother"]
+    simple_smoother:
+      plugin: "nav2_smoother::SimpleSmoother"
+      tolerance: 1.0e-10
+      max_its: 1000
+      do_refinement: True
+
+behavior_server:
+  ros__parameters:
+    costmap_topic: local_costmap/costmap_raw
+    footprint_topic: local_costmap/published_footprint
+    cycle_frequency: 10.0
+    behavior_plugins: ["spin", "backup", "drive_on_heading", "assisted_teleop", "wait"]
+    spin:
+      plugin: "nav2_behaviors/Spin"
+      spin_time: 2.0  # [TUNE] Minimum distance to obstacles while spinning; increase if robot gets too close to walls during recovery
+      spin_dist: 1.2 # [TUNE] Seconds to spin during recovery; increase if robot gets stuck
+    backup:
+      plugin: "nav2_behaviors/BackUp"
+
+    drive_on_heading:
+      plugin: "nav2_behaviors/DriveOnHeading"
+    wait:
+      plugin: "nav2_behaviors/Wait"
+    assisted_teleop:
+      plugin: "nav2_behaviors/AssistedTeleop"
+    global_frame: odom
+    robot_base_frame: base_link
+    transform_tolerance: 0.1
+    use_sim_time: false
+    simulate_ahead_time: 2.0
+    max_rotational_vel: 0.6    # [TUNE] Max spin speed during recovery behavior
+    min_rotational_vel: 0.2    # [TUNE] Min spin speed during recovery
+    rotational_acc_lim: 3.2
+
+  
+waypoint_follower:
+  ros__parameters:
+    use_sim_time: False
+    loop_rate: 20
+    stop_on_failure: false
+    waypoint_task_executor_plugin: "wait_at_waypoint"
+    wait_at_waypoint:
+      plugin: "nav2_waypoint_follower::WaitAtWaypoint"
+      enabled: True
+      waypoint_pause_duration: 200
+
+velocity_smoother:
+  ros__parameters:
+    use_sim_time: False
+    smoothing_frequency: 20.0
+    scale_velocities: False
+    feedback: "OPEN_LOOP"
+    max_velocity: [0.22, 0.0, 1.0]      # [FIXED] [linear_x, linear_y, angular_z] — match Burger limits
+    min_velocity: [-0.22, 0.0, -1.0]
+    max_accel: [2.5, 0.0, 3.2]          # [TUNE] Match acc_lim values in DWB
+    max_decel: [-2.5, 0.0, -3.2]        # [TUNE] Match decel_lim values in DWB
+    odom_topic: "odom"
+    odom_duration: 0.1
+    deadband_velocity: [0.0, 0.0, 0.0]
+    velocity_timeout: 1.0
+
+collision_monitor:
+  ros__parameters:
+    use_sim_time: False
+    base_frame_id: "base_footprint"
+    odom_frame_id: "odom"
+    cmd_vel_in_topic: "cmd_vel_smoothed"
+    cmd_vel_out_topic: "cmd_vel"
+    state_topic: "collision_monitor_state"
+    transform_tolerance: 0.2
+    source_timeout: 1.0
+    base_shift_correction: True
+    stop_pub_timeout: 2.0
+    polygons: ["FootprintApproach"]
+    FootprintApproach:
+      type: "polygon"
+      action_type: "approach"
+      footprint_topic: "/local_costmap/published_footprint"
+      time_before_collision: 1.2   # [TUNE] Seconds; lower = more aggressive stopping
+      simulation_time_step: 0.1
+      min_points: 6
+      visualize: False
+      enabled: True
+    observation_sources: ["scan"]
+    scan:
+      type: "scan"
+      topic: "/scan"
