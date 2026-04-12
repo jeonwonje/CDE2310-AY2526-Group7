@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `CDE2310_AMR_Trial_Run` package: mission coordinator state machine, search stations, static station, AprilTag detector (Kumaresan)
 - Cartographer SLAM config, minimal Nav2 params, full mission launch file (Kumaresan)
 - Docking server — discrete geometric visual servoing state machine for AprilTag docking (Shashwat)
+- Launcher node and RPi shooter node — servo PWM control for ball delivery mechanism (Clara)
 - Initial colcon workspace skeleton with 5 ament_python packages
 - Repository structure: `src/`, `hardware/`, `docs/`, `data/`
 - CLAUDE.md coding standards and AGENT_GIT_GUIDE.md for AI assistants
