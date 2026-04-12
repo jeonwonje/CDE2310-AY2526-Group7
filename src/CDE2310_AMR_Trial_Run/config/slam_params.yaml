@@ -1,0 +1,53 @@
+slam_toolbox:
+  ros__parameters:
+    # --- Solver Settings ---
+    # Optimized for Ceres (standard in Humble)
+    solver_plugin: solver_plugins::CeresSolver
+    ceres_linear_solver: SPARSE_NORMAL_CHOLESKY
+    ceres_preconditioner: SCHUR_JACOBI
+    ceres_trust_region: LEVENBERG_MARQUARDT
+    ceres_dogleg_type: TRADITIONAL_DOGLEG
+    ceres_loss_function: None
+
+    # --- ROS Infrastructure ---
+    odom_frame: odom
+    map_frame: map
+    base_frame: base_link
+    scan_topic: /scan
+    mode: mapping # Online asynchronous mapping
+
+    # --- Map & Timing Settings ---
+    map_update_interval: 0.1      # 10Hz map publishing for "live" feel
+    resolution: 0.025             # 2.5cm grid for surgical precision in corners
+    max_laser_range: 3.5          # Hard limit for TurtleBot3 LDS-02
+    minimum_time_interval: 0.1    # Process every available scan packet
+    transform_timeout: 0.2
+    tf_buffer_duration: 5.0
+    stack_size_to_use: 80000000   # Sufficient for large-scale maze mapping
+
+    # --- Scan Matcher: The Anti-Smear Configuration ---
+    use_scan_matching: true
+    use_scan_barycenter: true
+    
+    # Update thresholds (Tightened for sensitivity)
+    minimum_travel_distance: 0.02 # 2cm
+    minimum_travel_heading: 0.04  # ~2.3 degrees
+    
+    # Confidence & Quality (CRITICAL FIX)
+    link_match_minimum_response_fine: 0.8  # STOP accepting 5% garbage matches!
+    link_scan_maximum_distance: 1.5        # Use high-confidence near-field data for matching
+    
+    # Rotational Stability
+    angle_variance_penalty: 2.0            # Heavily penalize matches that don't align with Lidar geometry
+    distance_variance_penalty: 0.5
+    
+    # Buffer Settings
+    scan_buffer_size: 30
+    scan_buffer_maximum_scan_distance: 10.0
+
+    # --- Loop Closure: The Global Consistency ---
+    do_loop_closing: true 
+    loop_match_minimum_chain_size: 10           
+    loop_match_maximum_variance_coarse: 3.0  
+    loop_match_minimum_response_coarse: 0.35    
+    loop_match_minimum_response_fine: 0.65 # High standard for stitching old/new areas
