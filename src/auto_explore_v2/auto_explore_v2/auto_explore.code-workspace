@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../wall_follow"
+		},
+		{
+			"path": "../../wall_follow_v2"
+		}
+	],
+	"settings": {}
+}
