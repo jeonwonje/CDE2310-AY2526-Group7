@@ -8,6 +8,8 @@ from std_srvs.srv import SetBool
 from tf2_ros import Buffer, TransformListener
 from tf2_ros import TransformException
 
+ROBOT_NAME = "Boots"
+
 class MissionCoordinator(Node):
     def __init__(self):
         """
@@ -22,6 +24,8 @@ class MissionCoordinator(Node):
             spin around, see the tag again from the exact same bad angle, and enter 
             an infinite loop. If set too long (> 90s), the robot might finish the entire 
             maze and trigger the Search phase while the tag is still blacklisted.
+        - delivery_timeout (float, default: 90.0): Time in seconds to wait patiently
+          in DELIVERING state before forcefully abandoning the tag and resuming mission.
         2. TF Freshness
           stale_tf_threshold (float, default: 0.5): Max age of a transform (s) to be 
           considered "visible." 
@@ -34,6 +38,14 @@ class MissionCoordinator(Node):
         
         self.declare_parameter('enable_delivery', True)
         self.enable_delivery = self.get_parameter('enable_delivery').get_parameter_value().bool_value
+        
+        # --- TIMEOUT PARAMETERS ---
+        self.declare_parameter('master_mission_timeout', 1200.0)
+        self.master_mission_timeout = self.get_parameter('master_mission_timeout').get_parameter_value().double_value
+        self.declare_parameter('initial_exploration_timeout', 300.0)
+        self.initial_exploration_timeout = self.get_parameter('initial_exploration_timeout').get_parameter_value().double_value
+        self.declare_parameter('delivery_timeout', 90.0)
+        self.delivery_timeout = self.get_parameter('delivery_timeout').get_parameter_value().double_value
         
         # --- ROBUSTNESS PARAMETERS ---
         self.blacklist_timeout = 30.0
@@ -49,6 +61,10 @@ class MissionCoordinator(Node):
         
         # State Machine
         self.state = 'INIT'
+        self.timeout_search_active = False
+        self.exploration_active_duration = 0.0
+        self.delivery_active_duration = 0.0
+        self.active_delivery_target_backup = None
         
         # TF2 Setup
         self.tf_buffer = Buffer()
@@ -61,11 +77,58 @@ class MissionCoordinator(Node):
         # Exploration Service
         self.toggle_explore_client = self.create_client(SetBool, 'toggle_exploration')
         while not self.toggle_explore_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().debug('Waiting for /toggle_exploration service...')
+            self.get_logger().debug(f"{ROBOT_NAME} is waiting for /toggle_exploration service...")
             
         # Main Loop
         self.timer = self.create_timer(0.1, self.tick)
+        
+        self.mission_start_time = None
+        self.last_timer_time = None
+        self.timeout_timer = self.create_timer(1.0, self.check_timeouts)
+        
         self.start_exploration()
+
+    def check_timeouts(self):
+        if self.state in ['INIT', 'MISSION_COMPLETE', 'MISSION_TIMED_OUT']:
+            return
+            
+        now = self.get_clock().now()
+        if self.last_timer_time is None:
+            self.last_timer_time = now
+            return
+            
+        dt = (now - self.last_timer_time).nanoseconds / 1e9
+        self.last_timer_time = now
+        
+        # 1. Check Master Mission Timeout
+        if self.mission_start_time is not None:
+            mission_elapsed = (now - self.mission_start_time).nanoseconds / 1e9
+            if mission_elapsed > self.master_mission_timeout:
+                self.get_logger().error(f"{ROBOT_NAME} has reached MASTER MISSION TIMEOUT ({self.master_mission_timeout}s). {ROBOT_NAME} is aborting!")
+                self.state = 'MISSION_TIMED_OUT'
+                self.stop_exploration()
+                self.send_command('ABORT_SEARCH')
+                return
+
+        # 2. Check Exploration Phase Timeout
+        missing_tags = [t for t in self.target_tags if t not in self.docked_tags]
+        if self.state == 'EXPLORING' and missing_tags:
+            self.exploration_active_duration += dt
+            if self.exploration_active_duration > self.initial_exploration_timeout:
+                self.get_logger().warn(f"{ROBOT_NAME}'s exploration timeout ({self.initial_exploration_timeout}s) was reached. {ROBOT_NAME} is forcing the search phase.")
+                self.timeout_search_active = True
+                self.stop_exploration()
+                self.resume_mission()
+
+        # 3. Check Delivery Phase Timeout
+        if self.state == 'DELIVERING':
+            self.delivery_active_duration += dt
+            if self.delivery_active_duration > self.delivery_timeout:
+                target = getattr(self, 'active_delivery_target_backup', 'unknown')
+                self.get_logger().error(f"{ROBOT_NAME}'s delivery timeout reached ({self.delivery_timeout}s). Hardware stalled checking target {target}. {ROBOT_NAME} is forcibly marking it complete and abandoning it.")
+                self.docked_tags.add(target)
+                self.state = 'UNDOCKING'
+                self.send_command('START_UNDOCKING')
 
     def send_command(self, action, target=None, extra_data=None):
         """Helper to send JSON commands to the subsidiary nodes."""
@@ -73,14 +136,16 @@ class MissionCoordinator(Node):
         if extra_data:
             cmd.update(extra_data)
         self.command_pub.publish(String(data=json.dumps(cmd)))
-        self.get_logger().debug(f"Command Sent: {action} | Target: {target}")
+        self.get_logger().debug(f"{ROBOT_NAME} is sending command: {action} | Target: {target}")
 
     def start_exploration(self):
+        if self.mission_start_time is None:
+            self.mission_start_time = self.get_clock().now()
         req = SetBool.Request()
         req.data = True
         self.toggle_explore_client.call_async(req)
         self.state = 'EXPLORING'
-        self.get_logger().info("State -> EXPLORING")
+        self.get_logger().info(f"{ROBOT_NAME}'s State -> EXPLORING")
 
     def stop_exploration(self):
         req = SetBool.Request()
@@ -105,7 +170,7 @@ class MissionCoordinator(Node):
                 if now < self.blacklisted_tags[tag]:
                     continue
                 else:
-                    self.get_logger().debug(f"Blacklist expired for {tag}. Tag is eligible again.")
+                    self.get_logger().debug(f"{ROBOT_NAME}'s blacklist expired for {tag}. The tag is eligible for {ROBOT_NAME} again.")
                     del self.blacklisted_tags[tag]
                 
             try:
@@ -118,7 +183,7 @@ class MissionCoordinator(Node):
                 age = (now - msg_time).nanoseconds / 1e9
                 
                 if age < self.stale_tf_threshold:
-                    self.get_logger().info(f"Target {tag} acquired (Age: {age:.3f}s)")
+                    self.get_logger().info(f"{ROBOT_NAME} acquired Target {tag} (Age: {age:.3f}s)")
                     
                     if self.state == 'EXPLORING':
                         self.stop_exploration()
@@ -151,30 +216,32 @@ class MissionCoordinator(Node):
                 if self.state == 'DOCKING':
                     if not self.enable_delivery:
                         self.docked_tags.add(data)
-                        self.get_logger().info(f"Successfully docked at {data}. Delivery disabled -> UNDOCKING.")
+                        self.get_logger().info(f"{ROBOT_NAME} successfully docked at {data}. Delivery disabled -> {ROBOT_NAME} is UNDOCKING.")
                         self.state = 'UNDOCKING'
                         self.send_command('START_UNDOCKING')
                     else:
                         self.state = 'DELIVERING'
-                        self.get_logger().info(f"Docked at {data}. Sending START_DELIVERY command.")
+                        self.delivery_active_duration = 0.0
+                        self.active_delivery_target_backup = data
+                        self.get_logger().info(f"{ROBOT_NAME} is docked at {data}. {ROBOT_NAME} is sending the START_DELIVERY command.")
                         self.send_command('START_DELIVERY', target=data)
                         
             # 2.5a Handle Ball Fired Confirmation
             elif sender == 'deliverer' and status == 'BALL_FIRED':
-                self.get_logger().info(f"BALL FIRED CONFIRMED — {data}")
+                self.get_logger().info(f"{ROBOT_NAME} has confirmed BALL FIRED — {data}")
 
             # 2.5b Handle Delivery Success
             elif sender == 'deliverer' and status == 'DELIVERY_COMPLETE':
                 if self.state == 'DELIVERING':
                     self.docked_tags.add(data)
-                    self.get_logger().info(f"Successfully fully serviced and delivered to {data}.")
+                    self.get_logger().info(f"{ROBOT_NAME} has successfully fully serviced and delivered to {data}.")
                     self.state = 'UNDOCKING'
                     self.send_command('START_UNDOCKING')
                     
             # 2.75 Handle Undocking Success
             elif sender == 'docker' and status == 'UNDOCKING_COMPLETE':
                 if self.state == 'UNDOCKING':
-                    self.get_logger().info("Undocking complete. Robot cleared from tag.")
+                    self.get_logger().info(f"{ROBOT_NAME} completed undocking. {ROBOT_NAME} is completely cleared from the tag.")
                     self.resume_mission()
                     
             # 3. Handle Docking Failure (THE ROBUSTNESS CATCH)
@@ -184,32 +251,37 @@ class MissionCoordinator(Node):
                     expiration = self.get_clock().now() + rclpy.duration.Duration(seconds=self.blacklist_timeout)
                     self.blacklisted_tags[data] = expiration
                     
-                    self.get_logger().error(f"Docking failed for {data}. Blacklisted for {self.blacklist_timeout}s.")
+                    self.get_logger().error(f"{ROBOT_NAME} failed docking at {data}. {ROBOT_NAME} has blacklisted it for {self.blacklist_timeout}s.")
                     self.resume_mission() # Force the robot to keep moving
                     
             # 4. Handle Search Completion (Spin finished, tag still not found)
             elif sender == 'searcher' and status == 'SEARCH_FAILED':
                 if self.state == 'SEARCHING':
-                    self.get_logger().error(f"Search failed for {self.active_search_tag}.")
+                    self.get_logger().error(f"{ROBOT_NAME}'s search failed for {self.active_search_tag}.")
                     self.docked_tags.add(self.active_search_tag) # Mark as done to prevent infinite loops
                     self.resume_mission()
 
         except json.JSONDecodeError:
-            self.get_logger().error("Received malformed status message.")
+            self.get_logger().error(f"{ROBOT_NAME} received a completely malformed status message!")
 
     def resume_mission(self):
         """Intelligently routes the robot to its next task based on global state."""
         missing_tags = [t for t in self.target_tags if t not in self.docked_tags]
         
         if not missing_tags:
-            self.state = 'MISSION_COMPLETE'
-            self.get_logger().info("MISSION ACCOMPLISHED: All target tags processed.")
+            self.timeout_search_active = False
+            if self.exploration_completed:
+                self.state = 'MISSION_COMPLETE'
+                self.get_logger().info(f"{ROBOT_NAME} shouts MISSION ACCOMPLISHED! All target tags are processed and the map is complete.")
+            else:
+                self.get_logger().info(f"{ROBOT_NAME} processed all target tags, but the map is not complete. {ROBOT_NAME} is resuming exploration to finish the map.")
+                self.start_exploration()
             return
             
-        if self.exploration_completed:
+        if self.exploration_completed or getattr(self, 'timeout_search_active', False):
             self.state = 'SEARCHING'
             self.active_search_tag = missing_tags[0] # Pick the next missing tag
-            self.get_logger().warn(f"Resuming Search Phase for {self.active_search_tag}.")
+            self.get_logger().warn(f"{ROBOT_NAME} is resuming the Search Phase for {self.active_search_tag}.")
             self.send_command(
                 'START_SEARCH', 
                 target=self.active_search_tag, 
