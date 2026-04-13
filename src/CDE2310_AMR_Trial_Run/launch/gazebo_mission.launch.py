@@ -31,6 +31,7 @@ from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
     IncludeLaunchDescription,
+    TimerAction,
 )
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
@@ -47,9 +48,17 @@ def generate_launch_description():
     cartographer_config_dir = os.path.join(pkg_dir, 'config')
 
     tb3_gazebo_dir = get_package_share_directory('turtlebot3_gazebo')
+    pkg_gazebo_ros = get_package_share_directory('gazebo_ros')
     rviz_config = os.path.join(
         get_package_share_directory('nav2_bringup'),
         'rviz', 'nav2_default_view.rviz')
+
+    tb3_model = os.environ.get('TURTLEBOT3_MODEL', 'waffle_pi')
+    model_sdf = os.path.join(
+        tb3_gazebo_dir, 'models',
+        'turtlebot3_' + tb3_model, 'model.sdf')
+    gazebo_world = os.path.join(
+        tb3_gazebo_dir, 'worlds', 'turtlebot3_world.world')
 
     # ------------------------------------------------------------------
     # Launch arguments
@@ -77,11 +86,47 @@ def generate_launch_description():
 
     # ==================================================================
     # 1. GAZEBO + TURTLEBOT3 SPAWN
+    #    (broken out from turtlebot3_world.launch.py so we can delay
+    #     spawn_entity — the stock file launches everything concurrently
+    #     and Gazebo's factory plugin isn't ready in time on WSL2)
     # ==================================================================
-    gazebo_launch = IncludeLaunchDescription(
+    gzserver = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(pkg_gazebo_ros, 'launch', 'gzserver.launch.py')),
+        launch_arguments={'world': gazebo_world}.items(),
+    )
+
+    gzclient = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(pkg_gazebo_ros, 'launch', 'gzclient.launch.py')),
+    )
+
+    robot_state_publisher = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(tb3_gazebo_dir, 'launch',
-                         'turtlebot3_world.launch.py')),
+                         'robot_state_publisher.launch.py')),
+        launch_arguments={'use_sim_time': use_sim_time}.items(),
+    )
+
+    # Delay spawn_entity to give gzserver time to load the factory plugin.
+    # The spawner itself waits up to 120 s for the /spawn_entity service.
+    spawn_robot = TimerAction(
+        period=10.0,
+        actions=[
+            Node(
+                package='gazebo_ros',
+                executable='spawn_entity.py',
+                arguments=[
+                    '-entity', tb3_model,
+                    '-file', model_sdf,
+                    '-x', '-2.0',
+                    '-y', '-0.5',
+                    '-z', '0.01',
+                    '-timeout', '120',
+                ],
+                output='screen',
+            ),
+        ],
     )
 
     # ==================================================================
@@ -241,8 +286,11 @@ def generate_launch_description():
         declare_world,
         declare_launch_mission,
 
-        # 1. Gazebo
-        gazebo_launch,
+        # 1. Gazebo  (gzserver first, then client + RSP + delayed spawn)
+        gzserver,
+        gzclient,
+        robot_state_publisher,
+        spawn_robot,
 
         # 2. SLAM
         cartographer_node,
