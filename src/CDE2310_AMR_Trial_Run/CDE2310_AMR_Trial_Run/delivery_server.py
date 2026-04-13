@@ -4,67 +4,37 @@ import threading
 import time
 import json
 from std_msgs.msg import String
+from std_srvs.srv import Trigger
 from apriltag_msgs.msg import AprilTagDetectionArray
 
-import RPi.GPIO as GPIO
-
 TARGET_TAG_ID = 3
-
-# Servo constants
-SERVO_PIN = 12
-PWM_FREQ = 50
-CCW_DUTY = 10.0
-CW_DUTY = 5.0
-TIME_PER_REV = 0.87
-
 
 class DeliveryServer(Node):
     def __init__(self):
         super().__init__('delivery_server')
         if not self.has_parameter('use_sim_time'):
             self.declare_parameter('use_sim_time', False)
-
+        
         self.active_delivery_target = None
-
+        
         # Cooldown management for dynamic station
         self.on_cooldown = False
         self.cooldown_seconds = 4.0
         self.cooldown_timer = None
-
+        
         # Internal Shot Tracker
         self.dynamic_shots_fired = 0
         self.max_dynamic_shots = 3
-
-        # GPIO setup
-        self.is_firing = False
-        self.fire_lock = threading.Lock()
-
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setwarnings(False)
-        GPIO.setup(SERVO_PIN, GPIO.OUT)
-        self.pwm = GPIO.PWM(SERVO_PIN, PWM_FREQ)
-        self.pwm.start(0)
-        time.sleep(0.5)
-
-        # Startup preload: retract plunger + seat first ball
-        self.get_logger().info('Startup preload: retracting plunger...')
-        self.pwm.ChangeDutyCycle(CW_DUTY)
-        time.sleep(TIME_PER_REV * 2)
-        self.pwm.ChangeDutyCycle(0)
-        time.sleep(0.2)
-        self.get_logger().info('Startup preload: seating first ball...')
-        self.pwm.ChangeDutyCycle(CCW_DUTY)
-        time.sleep(TIME_PER_REV * 1.5 * 0.45)
-        self.pwm.ChangeDutyCycle(0)
-
+        
+        # Trigger Service Client
+        self.fire_client = self.create_client(Trigger, '/fire_ball')
+        
         # Subscriptions and Publishers
-        self.command_sub = self.create_subscription(
-            String, '/mission_command', self.command_callback, 10)
-        self.detection_sub = self.create_subscription(
-            AprilTagDetectionArray, '/detections', self.detection_callback, 10)
+        self.command_sub = self.create_subscription(String, '/mission_command', self.command_callback, 10)
+        self.detection_sub = self.create_subscription(AprilTagDetectionArray, '/detections', self.detection_callback, 10)
         self.status_pub = self.create_publisher(String, '/mission_status', 10)
-
-        self.get_logger().info('Delivery Server ready (shooter preloaded).')
+        
+        self.get_logger().debug('Delivery Server is ready.')
 
     def command_callback(self, msg):
         try:
@@ -72,131 +42,102 @@ class DeliveryServer(Node):
             if cmd.get('action') == 'START_DELIVERY':
                 target = cmd.get('target')
                 self.get_logger().info(f"Received START_DELIVERY for {target}")
-
+                
                 if target == 'tag36h11:0':
+                    # Static station protocol
                     self.active_delivery_target = target
-                    thread = threading.Thread(
-                        target=self.static_delivery_sequence, daemon=True)
+                    thread = threading.Thread(target=self.static_delivery_sequence, daemon=True)
                     thread.start()
-
+                
                 elif target == 'tag36h11:2':
+                    # Dynamic station protocol
                     self.active_delivery_target = target
                     self.dynamic_shots_fired = 0
-                    self.get_logger().debug(
-                        "Dynamic delivery activated. "
-                        "Scanning for target tag 3...")
+                    self.get_logger().debug("Dynamic delivery activated. Scanning for target tag 3...")
 
         except json.JSONDecodeError:
             self.get_logger().error("Malformed JSON in /mission_command")
 
     def static_delivery_sequence(self):
         self.get_logger().debug('Static delivery sequence started')
-
-        self.fire_ball()
+        
+        self.call_fire()
         time.sleep(4)
-
-        self.fire_ball()
+        
+        self.call_fire()
         time.sleep(6)
-
-        self.fire_ball()
-
+        
+        self.call_fire()
+        
+        # Finish delivery
         self.complete_delivery()
 
     def detection_callback(self, msg: AprilTagDetectionArray):
         if self.active_delivery_target != 'tag36h11:2':
             return
-
+            
         if self.on_cooldown:
             return
-
+            
         for detection in msg.detections:
             if detection.id == TARGET_TAG_ID:
-                self.get_logger().info(
-                    f'Tag ID {TARGET_TAG_ID} sighted! Triggering launch.')
+                self.get_logger().info(f'Tag ID {TARGET_TAG_ID} sighted passing by! Triggering launch.')
                 self.on_cooldown = True
-                threading.Thread(
-                    target=self.handle_dynamic_fire, daemon=True).start()
+                threading.Thread(target=self.handle_dynamic_fire, daemon=True).start()
                 break
 
     def handle_dynamic_fire(self):
-        success = self.fire_ball()
-
+        success, out_of_balls = self.call_fire()
+        
         if success:
             self.dynamic_shots_fired += 1
-            self.get_logger().info(
-                f"Shot fired. Count: {self.dynamic_shots_fired}"
-                f"/{self.max_dynamic_shots}")
-
-        if self.dynamic_shots_fired >= self.max_dynamic_shots:
+            self.get_logger().info(f"Shot successfully fired. Count: {self.dynamic_shots_fired}/{self.max_dynamic_shots}")
+            
+        # The physical RPi node lacks "Out of balls" telemetry, so we use the counter
+        if out_of_balls or self.dynamic_shots_fired >= self.max_dynamic_shots:
             self.complete_delivery()
         else:
             self._start_cooldown()
 
-    def fire_ball(self) -> bool:
-        """Directly actuate the servo to fire a ball."""
-        with self.fire_lock:
-            if self.is_firing:
-                self.get_logger().warn('Already firing - ignoring trigger')
-                return False
-            self.is_firing = True
-
-        self.get_logger().info('Firing!')
-        try:
-            # 1. Fire: short CCW push (ball already seated)
-            self.pwm.ChangeDutyCycle(CCW_DUTY)
-            time.sleep(TIME_PER_REV * 1.5 * 0.30)
-            self.pwm.ChangeDutyCycle(0)
-            time.sleep(0.3)
-            # 2. Retract: CW pull plunger back
-            self.pwm.ChangeDutyCycle(CW_DUTY)
-            time.sleep(TIME_PER_REV * 2)
-            self.pwm.ChangeDutyCycle(0)
-            # 3. Preload: nudge next ball into barrel
-            time.sleep(0.2)
-            self.pwm.ChangeDutyCycle(CCW_DUTY)
-            time.sleep(TIME_PER_REV * 1.5 * 0.45)
-            self.pwm.ChangeDutyCycle(0)
-        finally:
-            with self.fire_lock:
-                self.is_firing = False
-        return True
+    def call_fire(self):
+        """ Blocking call to the hardware fire service """
+        if not self.fire_client.wait_for_service(timeout_sec=2.0):
+            self.get_logger().error("Hardware fire service not available!")
+            return False, False
+            
+        request = Trigger.Request()
+        future = self.fire_client.call_async(request)
+        
+        while rclpy.ok() and not future.done():
+            time.sleep(0.05)
+        
+        response = future.result()
+        if response:
+            self.get_logger().debug(f"RPi Status: {response.message}")
+            out_of_balls = ('Out of balls' in response.message)
+            return response.success, out_of_balls
+        else:
+            self.get_logger().error("Failed to call RPi shooter service")
+            return False, False
 
     def _start_cooldown(self):
-        self.get_logger().debug(
-            f"Cooldown {self.cooldown_seconds}s to prevent double firing.")
-        self.cooldown_timer = self.create_timer(
-            self.cooldown_seconds, self._end_cooldown)
+        self.get_logger().debug(f"Target placed on {self.cooldown_seconds}s cooldown to prevent double firing.")
+        self.cooldown_timer = self.create_timer(self.cooldown_seconds, self._end_cooldown)
 
     def _end_cooldown(self):
         self.on_cooldown = False
         self.cooldown_timer.cancel()
         self.destroy_timer(self.cooldown_timer)
         self.cooldown_timer = None
-        self.get_logger().debug("Cooldown cleared. Ready for next pass.")
+        self.get_logger().debug("Target cooldown cleared. Ready for next pass.")
 
     def complete_delivery(self):
-        self.get_logger().info(
-            f'Delivery complete for {self.active_delivery_target}')
-
-        msg = {
-            'sender': 'deliverer',
-            'status': 'DELIVERY_COMPLETE',
-            'data': self.active_delivery_target
-        }
+        self.get_logger().info(f'Delivery sequence complete for {self.active_delivery_target}')
+        
+        msg = {'sender': 'deliverer', 'status': 'DELIVERY_COMPLETE', 'data': self.active_delivery_target}
         self.status_pub.publish(String(data=json.dumps(msg)))
-
+        
         self.active_delivery_target = None
-
-    def destroy_node(self):
-        # Reset launcher: retract plunger fully on shutdown
-        self.get_logger().info('Shutdown: retracting plunger...')
-        self.pwm.ChangeDutyCycle(CW_DUTY)
-        time.sleep(TIME_PER_REV * 2)
-        self.pwm.ChangeDutyCycle(0)
-        self.pwm.stop()
-        GPIO.cleanup()
-        self.get_logger().info('Launcher reset. GPIO cleaned up.')
-        super().destroy_node()
 
 
 def main(args=None):
