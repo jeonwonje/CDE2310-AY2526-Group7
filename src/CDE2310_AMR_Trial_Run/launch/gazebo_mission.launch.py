@@ -38,8 +38,20 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
+# Force CycloneDDS to use loopback for local Gazebo simulation.
+os.environ.pop('CYCLONEDDS_URI', None)
+os.environ['ROS_DOMAIN_ID'] = '0'
+
+# Add our custom models (AprilTag textures) to Gazebo's model path
+_pkg_share = get_package_share_directory('CDE2310_AMR_Trial_Run')
+_models_dir = os.path.join(_pkg_share, 'models')
+_existing = os.environ.get('GAZEBO_MODEL_PATH', '')
+os.environ['GAZEBO_MODEL_PATH'] = _models_dir + (':' + _existing if _existing else '')
+
 
 def generate_launch_description():
+    # DDS env vars already set at module level above
+
     # ------------------------------------------------------------------
     # Paths
     # ------------------------------------------------------------------
@@ -57,7 +69,9 @@ def generate_launch_description():
     model_sdf = os.path.join(
         tb3_gazebo_dir, 'models',
         'turtlebot3_' + tb3_model, 'model.sdf')
-    gazebo_world = os.path.join(
+    # Default to our custom AMR maze; fall back to turtlebot3_world
+    amr_maze = os.path.join(pkg_dir, 'worlds', 'amr_maze.world')
+    gazebo_world = amr_maze if os.path.isfile(amr_maze) else os.path.join(
         tb3_gazebo_dir, 'worlds', 'turtlebot3_world.world')
 
     # ------------------------------------------------------------------
@@ -119,8 +133,8 @@ def generate_launch_description():
                 arguments=[
                     '-entity', tb3_model,
                     '-file', model_sdf,
-                    '-x', '-2.0',
-                    '-y', '-0.5',
+                    '-x', '0.4',
+                    '-y', '0.4',
                     '-z', '0.01',
                     '-timeout', '120',
                 ],
@@ -197,6 +211,15 @@ def generate_launch_description():
         arguments=['--ros-args', '--log-level', 'WARN'],
     )
 
+    smoother_server = Node(
+        package='nav2_smoother',
+        executable='smoother_server',
+        name='smoother_server',
+        output='screen',
+        parameters=[nav2_yaml, sim_time_param],
+        arguments=['--ros-args', '--log-level', 'WARN'],
+    )
+
     lifecycle_manager_navigation = Node(
         package='nav2_lifecycle_manager',
         executable='lifecycle_manager',
@@ -207,13 +230,14 @@ def generate_launch_description():
             {'autostart': True},
             {'node_names': [
                 'planner_server',
+                'smoother_server',
                 'controller_server',
                 'behavior_server',
                 'bt_navigator',
             ]},
-            {'bond_timeout': 8.0},
+            {'bond_timeout': 30.0},
         ],
-        arguments=['--ros-args', '--log-level', 'WARN'],
+        arguments=['--ros-args', '--log-level', 'INFO'],
     )
 
     # ==================================================================
@@ -258,7 +282,26 @@ def generate_launch_description():
     )
 
     # ==================================================================
-    # 6. Auto-explore (conditional)
+    # 6. AprilTag detection (camera → tag TF)
+    # ==================================================================
+    apriltag_node = Node(
+        package='apriltag_ros',
+        executable='apriltag_node',
+        name='apriltag_node',
+        output='screen',
+        remappings=[
+            ('image_rect', '/camera/image_raw'),
+            ('camera_info', '/camera/camera_info'),
+        ],
+        parameters=[
+            sim_time_param,
+            {'family': '36h11'},
+            {'size': 0.16},
+        ],
+    )
+
+    # ==================================================================
+    # 7. Auto-explore (conditional)
     # ==================================================================
     find_frontiers = Node(
         package='auto_explore_v2',
@@ -298,6 +341,7 @@ def generate_launch_description():
 
         # 3. Nav2
         planner_server,
+        smoother_server,
         controller_server,
         behavior_server,
         bt_navigator,
@@ -306,12 +350,15 @@ def generate_launch_description():
         # 4. RViz
         rviz_node,
 
-        # 5. Mission
+        # 5. AprilTag detection
+        apriltag_node,
+
+        # 6. Mission
         search_server,
         docking_server,
         mission_coordinator,
 
-        # 6. Auto-explore
+        # 7. Auto-explore
         find_frontiers,
         score_and_post,
     ])

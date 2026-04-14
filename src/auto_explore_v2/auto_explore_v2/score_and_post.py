@@ -24,6 +24,9 @@ class ScoreAndPostNode(Node):
 
         # State Flags
         self.exploration_active = True
+        self.startup_ready = False  # Wait for SLAM to build initial map
+        self._startup_timer = self.create_timer(20.0, self._startup_ready_callback)
+        self.get_logger().info('Waiting 20s for SLAM to build initial map...')
 
         # Service
         self.toggle_service = self.create_service(
@@ -120,6 +123,13 @@ class ScoreAndPostNode(Node):
             self.get_logger().debug('Connected to navigation action servers')
         else:
             self.get_logger().debug('Waiting for Nav2 action servers...')
+
+    def _startup_ready_callback(self):
+        self.startup_ready = True
+        self.get_logger().info('Startup delay complete — exploration can begin.')
+        # Cancel timer so it doesn't fire repeatedly
+        if hasattr(self, '_startup_timer') and self._startup_timer:
+            self._startup_timer.cancel()
 
     def toggle_callback(self, request, response):
         self.exploration_active = request.data
@@ -678,6 +688,9 @@ class ScoreAndPostNode(Node):
         if not self.exploration_active:
             return
 
+        if not self.startup_ready:
+            return
+
         if self.navigation_in_progress or self.preflight_in_progress:
             self.get_logger().debug(
                 'Frontier attempt already in progress - skipping scoring'
@@ -685,6 +698,14 @@ class ScoreAndPostNode(Node):
             return
 
         if not hasattr(self, 'frontiers') or not isinstance(self.frontiers, list) or not self.frontiers:
+            # Don't declare complete if map is still tiny — frontiers may appear
+            # once the robot moves and SLAM discovers more area.
+            map_cells = self.map_width * self.map_height
+            if map_cells < 500 or self.exploration_active_duration < 30.0:
+                self.get_logger().debug(
+                    f'No frontiers yet but map small ({map_cells} cells, '
+                    f'{self.exploration_active_duration:.0f}s elapsed). Waiting...')
+                return
             if self.exploration_active:
                 self.get_logger().info('ZERO valid frontiers remaining. MAP COMPLETE. Terminating exploration.')
                 self.exploration_active = False
@@ -792,6 +813,16 @@ class ScoreAndPostNode(Node):
             break
 
         if all_blacklisted and ranked_frontiers:
+            # Don't declare complete too early — map is still growing,
+            # new frontiers will appear. Clear blacklist and retry.
+            map_cells = self.map_width * self.map_height
+            if map_cells < 2000 or self.exploration_active_duration < 60.0:
+                self.get_logger().info(
+                    f'All frontiers blacklisted but map still small '
+                    f'({map_cells} cells, {self.exploration_active_duration:.0f}s). '
+                    f'Clearing blacklist to retry.')
+                self.blacklist.clear()
+                return
             if self.exploration_active:
                 self.get_logger().info(
                     'All remaining frontiers are unreachable (blacklisted). MAP COMPLETE. Terminating exploration early.'
