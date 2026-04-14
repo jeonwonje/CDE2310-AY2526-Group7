@@ -18,9 +18,9 @@ behavior_server:
     spin:
       plugin: "nav2_behaviors/Spin"
       # --- CLAMP THE RECOVERY SPEEDS ---
-      max_rotational_vel: 0.4   # Restored limit to allow full rotations
+      max_rotational_vel: 0.8   # Raised for faster recovery spins
       min_rotational_vel: 0.2
-      rotational_acc_lim: 0.2   # Kept acceleration ultra-low for smoothness
+      rotational_acc_lim: 0.5   # Raised for snappier spin response
       # ---------------------------------
     backup:
       plugin: "nav2_behaviors/BackUp"
@@ -47,7 +47,7 @@ planner_server:
 controller_server:
   ros__parameters:
     use_sim_time: False
-    controller_frequency: 20.0
+    controller_frequency: 16.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.5
     min_theta_velocity_threshold: 0.001
@@ -69,10 +69,10 @@ controller_server:
       plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
       # --- THE KINEMATIC CLAMPS ---
       desired_linear_vel: 0.1       # Max forward speed (m/s)
-      max_angular_vel: 0.4           # Re-raised! Gives it the capacity to make sharp 90-degree pivots
+      max_angular_vel: 0.8           # Raised for faster turning
       max_linear_accel: 0.5          # Prevents jerky forward starts (m/s^2)
       max_linear_decel: 0.5          # Prevents violent braking (m/s^2)
-      max_angular_accel: 0.2         # TANKED ACCELERATION! Keeps the start of the turn incredibly gentle
+      max_angular_accel: 0.5         # Raised for snappier turn response
       # ----------------------------
       lookahead_dist: 0.25      # (Lowered) Places the carrot closer, forcing tight corner hugging
       min_lookahead_dist: 0.15  # (Lowered)
@@ -118,7 +118,7 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 10.0
-        inflation_radius: 0.40
+        inflation_radius: 0.16
 
 # 6. LOCAL COSTMAP (Live LiDAR only)
 local_costmap:
@@ -159,4 +159,4 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 10.0
-        inflation_radius: 0.40
+        inflation_radius: 0.16
