@@ -16,9 +16,22 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+
+
+# ---------------------------------------------------------------------------
+# DDS config split — only nodes that MUST talk to the RPi get the cross-
+# network config.  Everything else stays localhost-only so DDS discovery
+# and data traffic don't saturate the 2.4 GHz WiFi hotspot link.
+#
+#   Cross-network (cyclonedds.xml):  SLAM, EKF, controller, mission nodes
+#   Localhost-only (cyclonedds_local.xml): planner, behavior, bt_nav,
+#                                          lifecycle mgr, rviz, explore
+# ---------------------------------------------------------------------------
+DDS_CROSS = {'CYCLONEDDS_URI': 'file:///home/jeon-ros2-humble-gazebo-wsl/cyclonedds.xml'}
+DDS_LOCAL = {'CYCLONEDDS_URI': 'file:///home/jeon-ros2-humble-gazebo-wsl/cyclonedds_local.xml'}
 
 
 def generate_launch_description():
@@ -27,7 +40,8 @@ def generate_launch_description():
     # ------------------------------------------------------------------
     pkg_dir = get_package_share_directory('CDE2310_AMR_Trial_Run')
     nav2_yaml = os.path.join(pkg_dir, 'config', 'minimal_nav2.yaml')
-    cartographer_config_dir = os.path.join(pkg_dir, 'config')
+    slam_yaml = os.path.join(pkg_dir, 'config', 'slam_params.yaml')
+    ekf_yaml = os.path.join(pkg_dir, 'config', 'ekf.yaml')
     rviz_config = os.path.join(
         get_package_share_directory('nav2_bringup'), 'rviz', 'nav2_default_view.rviz')
 
@@ -44,36 +58,31 @@ def generate_launch_description():
     sim_time_param = {'use_sim_time': use_sim_time}
 
     # ==================================================================
-    # 1. SLAM — Cartographer
+    # 1. EKF — fuse wheel odom + IMU for better heading in tight corridors
     # ==================================================================
-    cartographer_node = Node(
-        package='cartographer_ros',
-        executable='cartographer_node',
-        name='cartographer_node',
+    ekf_node = Node(
+        package='robot_localization',
+        executable='ekf_node',
+        name='ekf_filter_node',
         output='screen',
-        parameters=[sim_time_param],
-        arguments=[
-            '-configuration_directory', cartographer_config_dir,
-            '-configuration_basename', 'cartographer.lua',
-            '--ros-args', '--log-level', 'WARN',
-        ],
-    )
-
-    cartographer_occupancy_grid_node = Node(
-        package='cartographer_ros',
-        executable='cartographer_occupancy_grid_node',
-        name='cartographer_occupancy_grid_node',
-        output='screen',
-        parameters=[
-            sim_time_param,
-            {'resolution': 0.05},
-            {'publish_period_sec': 1.0},
-        ],
-        arguments=['--ros-args', '--log-level', 'WARN'],
+        parameters=[ekf_yaml, sim_time_param],
+        additional_env=DDS_CROSS,
     )
 
     # ==================================================================
-    # 2. Nav2 stack
+    # 2. SLAM — SLAM Toolbox on Remote PC
+    # ==================================================================
+    slam_toolbox_node = Node(
+        package='slam_toolbox',
+        executable='async_slam_toolbox_node',
+        name='slam_toolbox',
+        output='screen',
+        parameters=[slam_yaml, sim_time_param],
+        additional_env=DDS_CROSS,  # needs /scan from RPi, publishes /map
+    )
+
+    # ==================================================================
+    # 3. Nav2 stack
     # ==================================================================
     planner_server = Node(
         package='nav2_planner',
@@ -82,6 +91,7 @@ def generate_launch_description():
         output='screen',
         parameters=[nav2_yaml, sim_time_param],
         arguments=['--ros-args', '--log-level', 'WARN'],
+        additional_env=DDS_LOCAL,
     )
 
     controller_server = Node(
@@ -91,6 +101,7 @@ def generate_launch_description():
         output='screen',
         parameters=[nav2_yaml, sim_time_param],
         arguments=['--ros-args', '--log-level', 'WARN'],
+        additional_env=DDS_CROSS,  # needs /scan from RPi, publishes /cmd_vel to RPi
     )
 
     behavior_server = Node(
@@ -100,6 +111,7 @@ def generate_launch_description():
         output='screen',
         parameters=[nav2_yaml, sim_time_param],
         arguments=['--ros-args', '--log-level', 'WARN'],
+        additional_env=DDS_LOCAL,
     )
 
     bt_navigator = Node(
@@ -109,6 +121,7 @@ def generate_launch_description():
         output='screen',
         parameters=[nav2_yaml, sim_time_param],
         arguments=['--ros-args', '--log-level', 'WARN'],
+        additional_env=DDS_LOCAL,
     )
 
     lifecycle_manager_navigation = Node(
@@ -125,9 +138,10 @@ def generate_launch_description():
                 'behavior_server',
                 'bt_navigator',
             ]},
-            {'bond_timeout': 8.0},
+            {'bond_timeout': 30.0},
         ],
-        arguments=['--ros-args', '--log-level', 'WARN'],
+        arguments=['--ros-args', '--log-level', 'INFO'],
+        additional_env=DDS_LOCAL,
     )
 
     # ==================================================================
@@ -139,6 +153,7 @@ def generate_launch_description():
         name='rviz2',
         output='screen',
         arguments=['-d', rviz_config, '--ros-args', '--log-level', 'WARN'],
+        additional_env=DDS_LOCAL,
     )
 
     # ==================================================================
@@ -150,6 +165,7 @@ def generate_launch_description():
         name='search_server',
         output='screen',
         parameters=[sim_time_param],
+        additional_env=DDS_LOCAL,
     )
 
     docking_server = Node(
@@ -158,6 +174,7 @@ def generate_launch_description():
         name='docking_server',
         output='screen',
         parameters=[sim_time_param],
+        additional_env=DDS_CROSS,  # needs RPi dock pose topics + delivery service
     )
 
     # NOTE: delivery_server runs on the RPi (needs local access to /fire_ball service)
@@ -168,6 +185,7 @@ def generate_launch_description():
         name='mission_coordinator',
         output='screen',
         parameters=[sim_time_param],
+        additional_env=DDS_CROSS,  # calls services on RPi
     )
 
     # ==================================================================
@@ -179,6 +197,7 @@ def generate_launch_description():
         name='auto_explore',
         output='screen',
         parameters=[sim_time_param],
+        additional_env=DDS_LOCAL,
     )
 
     score_and_post = Node(
@@ -187,6 +206,7 @@ def generate_launch_description():
         name='score_and_post',
         output='screen',
         parameters=[sim_time_param],
+        additional_env=DDS_LOCAL,
     )
 
     # ==================================================================
@@ -195,11 +215,13 @@ def generate_launch_description():
     return LaunchDescription([
         declare_use_sim_time,
 
-        # 1. SLAM
-        cartographer_node,
-        cartographer_occupancy_grid_node,
+        # 1. EKF (odom + IMU fusion)
+        ekf_node,
 
-        # 2. Nav2
+        # 2. SLAM
+        slam_toolbox_node,
+
+        # 3. Nav2
         planner_server,
         controller_server,
         behavior_server,

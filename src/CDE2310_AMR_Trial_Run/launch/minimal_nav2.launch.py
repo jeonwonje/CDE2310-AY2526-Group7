@@ -9,8 +9,9 @@ def generate_launch_description():
     # Paths
     pkg_dir = get_package_share_directory('CDE2310_AMR_Trial_Run')
     nav2_yaml = os.path.join(pkg_dir, 'config', 'minimal_nav2.yaml')
-    cartographer_config_dir = os.path.join(pkg_dir, 'config')
-    
+    slam_yaml = os.path.join(pkg_dir, 'config', 'slam_params.yaml')
+    ekf_yaml = os.path.join(pkg_dir, 'config', 'ekf.yaml')
+
     use_sim_time = LaunchConfiguration('use_sim_time')
 
     declare_use_sim_time_cmd = DeclareLaunchArgument(
@@ -29,33 +30,25 @@ def generate_launch_description():
     return LaunchDescription([
         declare_use_sim_time_cmd,
 
-        # --- 1. CARTOGRAPHER MAPPING NODE ---
+        # --- 1. EKF (odom + IMU fusion) ---
         Node(
-            package='cartographer_ros',
-            executable='cartographer_node',
-            name='cartographer_node',
+            package='robot_localization',
+            executable='ekf_node',
+            name='ekf_filter_node',
             output='screen',
-            parameters=[{'use_sim_time': use_sim_time}],
-            arguments=[
-                '-configuration_directory', cartographer_config_dir,
-                '-configuration_basename', 'cartographer.lua'
-            ]
+            parameters=[ekf_yaml, {'use_sim_time': use_sim_time}]
         ),
 
-        # --- 2. CARTOGRAPHER OCCUPANCY GRID (Generates the /map topic) ---
+        # --- 2. SLAM TOOLBOX (async) ---
         Node(
-            package='cartographer_ros',
-            executable='cartographer_occupancy_grid_node',
-            name='cartographer_occupancy_grid_node',
+            package='slam_toolbox',
+            executable='async_slam_toolbox_node',
+            name='slam_toolbox',
             output='screen',
-            parameters=[
-                {'use_sim_time': use_sim_time},
-                {'resolution': 0.05},
-                {'publish_period_sec': 1.0}
-            ]
+            parameters=[slam_yaml, {'use_sim_time': use_sim_time}]
         ),
 
-        # --- 3. CORE NAV2 SERVERS ---
+        # --- 2. CORE NAV2 SERVERS ---
         Node(
             package='nav2_planner',
             executable='planner_server',
@@ -85,7 +78,7 @@ def generate_launch_description():
             parameters=[nav2_yaml, {'use_sim_time': use_sim_time}]
         ),
 
-        # --- 4. LIFECYCLE MANAGER ---
+        # --- 3. LIFECYCLE MANAGER ---
         Node(
             package='nav2_lifecycle_manager',
             executable='lifecycle_manager',

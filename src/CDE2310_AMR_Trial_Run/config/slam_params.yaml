@@ -17,8 +17,8 @@ slam_toolbox:
     mode: mapping # Online asynchronous mapping
 
     # --- Map & Timing Settings ---
-    map_update_interval: 0.1      # 10Hz map publishing for "live" feel
-    resolution: 0.025             # 2.5cm grid for surgical precision in corners
+    map_update_interval: 2.0      # Every 2s — was 0.1s (10Hz), killed CPU with frontier calc
+    resolution: 0.025             # 2.5cm grid for corridor precision
     max_laser_range: 3.5          # Hard limit for TurtleBot3 LDS-02
     minimum_time_interval: 0.1    # Process every available scan packet
     transform_timeout: 0.2
