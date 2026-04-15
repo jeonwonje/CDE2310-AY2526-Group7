@@ -38,9 +38,6 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
-# Force CycloneDDS to use loopback for local Gazebo simulation.
-os.environ.pop('CYCLONEDDS_URI', None)
-os.environ['ROS_DOMAIN_ID'] = '0'
 
 # Add our custom models (AprilTag textures) to Gazebo's model path
 _pkg_share = get_package_share_directory('CDE2310_AMR_Trial_Run')
@@ -57,7 +54,7 @@ def generate_launch_description():
     # ------------------------------------------------------------------
     pkg_dir = get_package_share_directory('CDE2310_AMR_Trial_Run')
     nav2_yaml = os.path.join(pkg_dir, 'config', 'minimal_nav2.yaml')
-    cartographer_config_dir = os.path.join(pkg_dir, 'config')
+    slam_yaml = os.path.join(pkg_dir, 'config', 'slam_params.yaml')
 
     tb3_gazebo_dir = get_package_share_directory('turtlebot3_gazebo')
     pkg_gazebo_ros = get_package_share_directory('gazebo_ros')
@@ -144,32 +141,14 @@ def generate_launch_description():
     )
 
     # ==================================================================
-    # 2. SLAM — Cartographer
+    # 2. SLAM — SLAM Toolbox (async)
     # ==================================================================
-    cartographer_node = Node(
-        package='cartographer_ros',
-        executable='cartographer_node',
-        name='cartographer_node',
+    slam_toolbox_node = Node(
+        package='slam_toolbox',
+        executable='async_slam_toolbox_node',
+        name='slam_toolbox',
         output='screen',
-        parameters=[sim_time_param],
-        arguments=[
-            '-configuration_directory', cartographer_config_dir,
-            '-configuration_basename', 'cartographer.lua',
-            '--ros-args', '--log-level', 'WARN',
-        ],
-    )
-
-    cartographer_occupancy_grid_node = Node(
-        package='cartographer_ros',
-        executable='cartographer_occupancy_grid_node',
-        name='cartographer_occupancy_grid_node',
-        output='screen',
-        parameters=[
-            sim_time_param,
-            {'resolution': 0.05},
-            {'publish_period_sec': 1.0},
-        ],
-        arguments=['--ros-args', '--log-level', 'WARN'],
+        parameters=[slam_yaml, sim_time_param],
     )
 
     # ==================================================================
@@ -181,7 +160,7 @@ def generate_launch_description():
         name='planner_server',
         output='screen',
         parameters=[nav2_yaml, sim_time_param],
-        arguments=['--ros-args', '--log-level', 'WARN'],
+        arguments=['--ros-args', '--log-level', 'INFO'],
     )
 
     controller_server = Node(
@@ -190,7 +169,7 @@ def generate_launch_description():
         name='controller_server',
         output='screen',
         parameters=[nav2_yaml, sim_time_param],
-        arguments=['--ros-args', '--log-level', 'WARN'],
+        arguments=['--ros-args', '--log-level', 'INFO'],
     )
 
     behavior_server = Node(
@@ -199,7 +178,7 @@ def generate_launch_description():
         name='behavior_server',
         output='screen',
         parameters=[nav2_yaml, sim_time_param],
-        arguments=['--ros-args', '--log-level', 'WARN'],
+        arguments=['--ros-args', '--log-level', 'INFO'],
     )
 
     bt_navigator = Node(
@@ -208,7 +187,7 @@ def generate_launch_description():
         name='bt_navigator',
         output='screen',
         parameters=[nav2_yaml, sim_time_param],
-        arguments=['--ros-args', '--log-level', 'WARN'],
+        arguments=['--ros-args', '--log-level', 'INFO'],
     )
 
     smoother_server = Node(
@@ -217,7 +196,7 @@ def generate_launch_description():
         name='smoother_server',
         output='screen',
         parameters=[nav2_yaml, sim_time_param],
-        arguments=['--ros-args', '--log-level', 'WARN'],
+        arguments=['--ros-args', '--log-level', 'INFO'],
     )
 
     lifecycle_manager_navigation = Node(
@@ -336,8 +315,7 @@ def generate_launch_description():
         spawn_robot,
 
         # 2. SLAM
-        cartographer_node,
-        cartographer_occupancy_grid_node,
+        slam_toolbox_node,
 
         # 3. Nav2
         planner_server,

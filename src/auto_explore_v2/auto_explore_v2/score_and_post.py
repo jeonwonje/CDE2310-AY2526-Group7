@@ -68,13 +68,9 @@ class ScoreAndPostNode(Node):
         self.blacklist = {}
 
         # Timeout settings
-        self.declare_parameter('master_exploration_timeout_sec', 300.0)
         self.declare_parameter('nav2_goal_timeout_sec', 60.0)
-        self.master_timeout_sec = self.get_parameter('master_exploration_timeout_sec').get_parameter_value().double_value
         self.goal_timeout_sec = self.get_parameter('nav2_goal_timeout_sec').get_parameter_value().double_value
         
-        self.exploration_active_duration = 0.0
-        self.last_exploration_tick_time = self.get_clock().now()
         self.active_goal_start_time = None
         
         self.timeout_timer = self.create_timer(1.0, self.timeout_monitor_callback)
@@ -235,26 +231,6 @@ class ScoreAndPostNode(Node):
 
     def timeout_monitor_callback(self):
         now = self.get_clock().now()
-        
-        if self.exploration_active:
-            if self.last_exploration_tick_time is not None:
-                duration = (now - self.last_exploration_tick_time).nanoseconds / 1e9
-                self.exploration_active_duration += duration
-        self.last_exploration_tick_time = now
-        
-        if self.exploration_active and self.exploration_active_duration >= self.master_timeout_sec:
-            self.get_logger().info('Master exploration timeout reached! Terminating exploration.')
-            self.exploration_active = False
-
-            if self.navigation_in_progress and self.current_goal_handle:
-                self.current_goal_handle.cancel_goal_async()
-            if self.preflight_in_progress and self.current_preflight_goal_handle:
-                self.current_preflight_goal_handle.cancel_goal_async()
-
-            self.clear_navigation_state()
-
-            msg = {'sender': 'explorer', 'status': 'EXPLORATION_COMPLETE', 'data': None}
-            self.status_pub.publish(String(data=json.dumps(msg)))
             
         if self.navigation_in_progress and self.active_goal_start_time is not None:
             goal_duration = (now - self.active_goal_start_time).nanoseconds / 1e9

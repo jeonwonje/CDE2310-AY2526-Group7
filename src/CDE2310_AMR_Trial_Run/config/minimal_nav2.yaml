@@ -45,30 +45,25 @@ planner_server:
     use_sim_time: False
     planner_plugins: ["GridBased"]
     GridBased:
-      plugin: "nav2_smac_planner/SmacPlanner2D"
+      plugin: "nav2_navfn_planner/NavfnPlanner"
       tolerance: 0.5
+      use_astar: false        # Dijkstra — smooth potential field centers paths in corridors
       allow_unknown: true
-      max_iterations: 50000
-      max_on_approach_iterations: 1000
-      max_planning_time: 3.0
-      smoother_cost_weight: 15.0      # Very high — smoother pushes path away from cost
-      smoother_w_data: 0.2            # Low — path can deviate from A* to avoid cost
-      smoother_w_smooth: 0.05         # Almost no smoothing — don't curve into inflated area
-      cost_travel_multiplier: 50.0    # Extreme — treat any inflated cell as nearly impassable
+      cost_factor: 0.35       # Lower = more sensitive to inflated cost = wider turns at corners
+      neutral_cost: 50        # Lower neutral cost amplifies the cost gradient
+      lethal_cost: 254
 
 # 4. LOCAL CONTROLLER
-# 0.38m corridors, 0.32m robot, 0.03m clearance per side.
-# No collision detection (causes oscillation at 5Hz).
-# No rotation shim (causes oscillation).
-# Slow speed, far lookahead, gentle turns.
+# Robot: 0.24m x 0.18m rectangle. Corridor: 0.36m. Clearance: 0.06m/side.
+# Polygon footprint for accurate rectangular collision checking.
 controller_server:
   ros__parameters:
     use_sim_time: False
-    controller_frequency: 5.0
+    controller_frequency: 20.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.5
     min_theta_velocity_threshold: 0.001
-    failure_tolerance: 0.5
+    failure_tolerance: 1.0
     progress_checker_plugin: "progress_checker"
     goal_checker_plugins: ["general_goal_checker"]
     controller_plugins: ["FollowPath"]
@@ -82,35 +77,44 @@ controller_server:
       xy_goal_tolerance: 0.20
       yaw_goal_tolerance: 0.30
       stateful: True
+    # Rotation shim: stop-rotate-go at corners.
+    # When path turns > 0.4 rad (~23 deg), robot stops, rotates in place
+    # to face the new direction, then drives straight. Clean 90-deg turns.
     FollowPath:
-      plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
-      desired_linear_vel: 0.06
+      plugin: "nav2_rotation_shim_controller::RotationShimController"
+      primary_controller: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
+      angular_dist_threshold: 0.3     # Rotate in place if path heading > 17 deg off (more sensitive)
+      forward_sampling_distance: 0.5  # Look 0.5m ahead — detect corners earlier
+      rotate_to_heading_angular_vel: 0.5  # Faster rotation at corners
+      max_angular_accel: 0.4
+      simulate_ahead_time: 0.8
+      # RPP params (drives straight segments between rotations)
+      desired_linear_vel: 0.08
       max_angular_vel: 0.3
       max_linear_accel: 0.2
       max_linear_decel: 0.3
       max_angular_accel: 0.2
-      lookahead_dist: 0.35
+      lookahead_dist: 0.30
       min_lookahead_dist: 0.20
-      max_lookahead_dist: 0.50
-      lookahead_time: 1.5
+      max_lookahead_dist: 0.40
+      lookahead_time: 1.2
       use_velocity_scaled_lookahead_dist: true
       transform_tolerance: 2.0
       min_approach_linear_velocity: 0.03
       use_collision_detection: false
       use_regulated_linear_velocity_scaling: true
       use_cost_regulated_linear_velocity_scaling: true
-      cost_scaling_gain: 3.0
+      cost_scaling_gain: 2.0
       regulated_linear_scaling_min_radius: 0.2
-      regulated_linear_scaling_min_speed: 0.02
-      rotate_to_heading_min_angle: 1.5
+      regulated_linear_scaling_min_speed: 0.03
       allow_reversing: false
 
 # 5. GLOBAL COSTMAP
-# 0.38m corridors, 0.32m robot.
-# robot_radius 0.16 = exact half of robot. Lethal = can't plan here.
-# Leaves 0.38 - 0.32 = 0.06m total = 0.03m per side.
-# inflation_radius 0.03 fills the remaining clearance.
-# cost_scaling 0.5 = cost stays high, path forced to dead center.
+# Robot: 0.24m wide. Corridor: 0.36m. Clearance: 0.06m per side.
+# Polygon footprint: 0.24m x 0.18m rectangle.
+# inflation_radius 0.08 = clearance (0.06) + 1 safety cell (0.025).
+# cost_scaling 0.5 = cost at edge of clearance: 254*exp(-0.5*0.08) = 244.
+# Path is forced to dead center where cost is lowest.
 global_costmap:
   global_costmap:
     ros__parameters:
@@ -119,7 +123,7 @@ global_costmap:
       global_frame: map
       robot_base_frame: base_link
       use_sim_time: False
-      robot_radius: 0.15
+      footprint: "[[0.09, 0.12], [0.09, -0.12], [-0.09, -0.12], [-0.09, 0.12]]"
       resolution: 0.025
       transform_tolerance: 2.0
       track_unknown_space: true
@@ -130,8 +134,8 @@ global_costmap:
         map_subscribe_transient_local: True
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 0.1
-        inflation_radius: 0.25
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.15
 
 # 6. LOCAL COSTMAP
 local_costmap:
@@ -147,7 +151,7 @@ local_costmap:
       height: 3
       resolution: 0.025
       transform_tolerance: 2.0
-      robot_radius: 0.15
+      footprint: "[[0.09, 0.12], [0.09, -0.12], [-0.09, -0.12], [-0.09, 0.12]]"
       plugins: ["obstacle_layer", "inflation_layer"]
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
@@ -165,5 +169,5 @@ local_costmap:
           obstacle_min_range: 0.0
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 0.1
-        inflation_radius: 0.25
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.15
