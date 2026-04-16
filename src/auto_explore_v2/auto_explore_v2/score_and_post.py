@@ -582,50 +582,31 @@ class ScoreAndPostNode(Node):
         
         if not path.poses:
             self.frontier_attempts[frontier_key] = attempts + 1
-            if attempts < 2:
-                self.clear_navigation_state()
-                self.get_logger().debug(
-                    'Nav2 could not produce a usable path for frontier cluster '
-                    f'{goal_frontier}. Incrementing attempt count.'
-                )
-                self.filter_frontiers()
-                return
-            else:
-                self.get_logger().warning(
-                    f'Frontier {goal_frontier} has failed ComputePathToPose {attempts} times. '
-                    'Bypassing preflight checks and dispatching a Hail Mary to Nav2!'
-                )
-        else:
-            if attempts < 2:
-                path_is_clear, blocked_cells = self.is_path_clear(path)
-                if not path_is_clear:
-                    self.frontier_attempts[frontier_key] = attempts + 1
-                    self.clear_navigation_state()
-                    self.get_logger().debug(
-                        'Manual path validation found blocked cells for frontier '
-                        f'cluster {goal_frontier}. Incrementing attempt count.'
-                    )
-                    self.filter_frontiers()
-                    return
-                self.get_logger().debug(
-                    f'Computed path with {len(path.poses)} poses for frontier '
-                    f'{goal_frontier}; manual path validation passed'
-                )
-            else:
-                self.get_logger().warning(
-                    f'Frontier {goal_frontier} has failed is_path_clear {attempts} times. '
-                    'Bypassing manual pixel checks and performing a Hail Mary dispatch directly to Nav2!'
-                )
+            self.clear_navigation_state()
+            self.get_logger().debug(
+                'Nav2 could not produce a usable path for frontier cluster '
+                f'{goal_frontier}. Incrementing attempt count.'
+            )
+            self.filter_frontiers()
+            return
+
+        path_is_clear, blocked_cells = self.is_path_clear(path)
+        if not path_is_clear:
+            self.frontier_attempts[frontier_key] = attempts + 1
+            self.clear_navigation_state()
+            self.get_logger().debug(
+                'Manual path validation found blocked cells for frontier '
+                f'cluster {goal_frontier}. Incrementing attempt count.'
+            )
+            self.filter_frontiers()
+            return
+
+        self.get_logger().debug(
+            f'Computed path with {len(path.poses)} poses for frontier '
+            f'{goal_frontier}; manual path validation passed'
+        )
         
-        if path.poses:
-            path_length_meters = len(path.poses) * self.map_resolution
-        else:
-            robot_position = self.update_robot_position()
-            if robot_position:
-                euclidean_dist = self.calculate_distance_score(goal_frontier, robot_position)
-                path_length_meters = euclidean_dist * 1.5  # Heuristic multiplier for blind maze paths
-            else:
-                path_length_meters = 15.0
+        path_length_meters = len(path.poses) * self.map_resolution
 
         self.goal_timeout_sec = (path_length_meters / DYNAMIC_TIMEOUT_SPEED) + DYNAMIC_TIMEOUT_BUFFER
         self.get_logger().debug(f'Dynamic timeout for local path length {path_length_meters:.1f}m set to {self.goal_timeout_sec:.1f}s')
@@ -741,12 +722,15 @@ class ScoreAndPostNode(Node):
                 attempts = self.frontier_attempts.get(frontier_key, 0)
                 timeouts = self.timeout_attempts.get(frontier_key, 0)
                 
-                # is_path_clear failures get -PATH_BLOCKED_PENALTY, timeout failures get -TIMEOUT_PENALTY penalty
-                penalty = (-PATH_BLOCKED_PENALTY * attempts) + (-TIMEOUT_PENALTY * timeouts)
-                
                 # Unify into a single competitive score
                 frontier_size = frontier[2] if len(frontier) > 2 else 0
                 size_bonus = frontier_size * 1.5  # Tuned down to 1.5 to balance nicely with distance
+
+                # Dynamic Penalty: neutralizes the size_bonus and adds a baseline penalty to drop score smoothly
+                dynamic_attempt_penalty = PATH_BLOCKED_PENALTY + size_bonus
+                dynamic_timeout_penalty = TIMEOUT_PENALTY + size_bonus
+                
+                penalty = (-dynamic_attempt_penalty * attempts) + (-dynamic_timeout_penalty * timeouts)
                 
                 final_score = bfs_score + size_bonus - distance_score + penalty
                 
