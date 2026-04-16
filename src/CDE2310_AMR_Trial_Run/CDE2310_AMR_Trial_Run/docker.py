@@ -75,7 +75,7 @@ class DockingServer(Node):
 
         # --- ROBUSTNESS PARAMETERS ---
         self.fallback_staging_offset = 0.15
-        self.max_docking_time = 240.0        
+        self.max_docking_time = 180.0 #changed from 240.0        
         self.sensor_drop_tolerance = 1.0    
         
         # --- REFINEMENT PARAMETERS ---
@@ -96,9 +96,9 @@ class DockingServer(Node):
         
         # --- RETRY PARAMETERS ---
         self.max_retries = 3
-        self.max_allowed_y_error = 0.05   
+        self.max_allowed_y_error = 0.4 #changed from 0.5   
         self.backup_speed = -0.1         
-        self.backup_duration = 3.0        
+        self.backup_duration = 2.0  #changed from 3.0    
 
         # --- UNDOCKING PARAMETERS ---
         self.undock_distance = 0.20        

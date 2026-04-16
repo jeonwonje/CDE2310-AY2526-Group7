@@ -32,7 +32,7 @@ class SearchServer(Node):
         self.initial_pose_captured = False
         
         # Max distance (meters) to search for a safe pixel if hardcoded is inside a wall
-        self.max_safe_search_radius = 1.5 
+        self.max_safe_search_radius = 0.6 #changed from 1.5 
         
         # Spin configuration
         self.spin_velocity = 0.5  # rad/s
