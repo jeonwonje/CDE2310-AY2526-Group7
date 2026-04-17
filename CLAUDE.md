@@ -14,22 +14,19 @@ ping-pong ball via a spring-loaded launcher.
 ```
 Group7_AMR/                ← colcon workspace root
 ├── src/
-│   ├── amr_nav/           ← Custom navigation, exploration, mission control
-│   ├── amr_perception/    ← AprilTag detection, camera, docking
-│   └── amr_launcher/      ← Servo actuation, ball delivery
-├── archive/
-│   └── amr_utils/         ← Legacy lab exercise nodes (frozen, not built)
+│   ├── CDE2310_AMR_Trial_Run/  ← Mission coordination, docking, delivery, search, shooter
+│   └── auto_explore_v2/        ← BFS frontier detection, scored Nav2 goals
 ├── hardware/
-│   ├── launcher/          ← SolidWorks CAD for launcher
-│   └── chassis/           ← TurtleBot3 mounting mods
+│   ├── launcher/          ← Launcher mechanism CAD
+│   └── chassis/           ← TurtleBot3 assembly + mounts
 ├── docs/
-│   ├── reports/           ← Milestone reports
+│   ├── reports/           ← SDD reports (detailed versions)
 │   └── end_user_doc/      ← End-user documentation
 ├── data/                  ← Recorded bags, maps
 ├── CLAUDE.md              ← This file
 ├── AGENT_GIT_GUIDE.md     ← Quick reference for AI agents
 ├── CHANGELOG.md           ← Keep-a-changelog format
-├── README.md              ← Project overview
+├── README.md              ← Consolidated SDD + project overview
 └── requirements.txt       ← pip dependencies
 ```
 
@@ -102,8 +99,8 @@ Use [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) under the
 
 - Python: follow PEP 8, enforced by `ament_flake8`.
 - ROS2 nodes: use `rclpy` with lifecycle patterns where appropriate.
-- Launch files: Python launch files in `amr_nav/launch/`.
-- Config files: YAML in `amr_nav/config/`.
+- Launch files: Python launch files in each package's `launch/` directory.
+- Config files: YAML in each package's `config/` directory.
 
 ## Files Never to Commit
 

@@ -74,100 +74,13 @@ pauses/resumes exploration during docking/delivery.
 
 ---
 
-#### 2.1.2  Custom Navigation — `amr_nav`
-
-**Owner:** Jeon
-
-**Purpose:** A Nav2-free navigation alternative using Dijkstra/A* on the
-occupancy grid. Designed for lighter compute and tighter integration with the
-mission state machine.
-
-**Node:** `auto_nav` (auto_nav.py)
-
-**Algorithm — Target Selection (Dijkstra multi-source):**
-
-1. Convert OccupancyGrid to binary grid (wall_threshold = 10).
-2. Multi-source Dijkstra from all visited cells.
-3. Find the nearest unvisited free cell within `distance_threshold` (35 cells).
-4. If none found, return `None` → trigger RECOVERY.
-
-**Algorithm — Path Planning (A\* with wall penalty):**
-
-1. Standard A* from robot cell to target cell.
-2. For each cell expansion, add a penalty if the cell is within
-   `wall_penalty` (5) cells of a wall: `wall_cost` (200) × proximity.
-3. This biases paths toward corridor centres, reducing collision risk.
-
-**Algorithm — Waypoint Reduction (cluster_path):**
-
-1. Walk the raw A* path.
-2. Drop intermediate waypoints closer than `cluster_distance` (6 cells).
-3. Result: sparse waypoint list for smoother motion.
-
-**State Machine:**
-
-```
-                          ┌──────────────────────┐
-                          │       IDLE            │
-                          └──────────┬───────────┘
-                                     │ start
-                          ┌──────────▼───────────┐
-                ┌────────►│   FINDING_TARGET      │◄────────────┐
-                │         └──────────┬───────────┘              │
-                │                    │ target found              │
-                │         ┌──────────▼───────────┐              │
-                │         │   PLANNING_PATH       │              │
-                │         └──────────┬───────────┘              │
-                │                    │ path planned              │
-                │         ┌──────────▼───────────┐              │
-                │         │   NAVIGATING          │──── done ───┘
-                │         └──────────┬───────────┘
-                │                    │ tag interrupt
-                │         ┌──────────▼───────────┐
-                │         │   TAG_INTERRUPT        │
-                │         └──────────┬───────────┘
-                │                    │
-                │         ┌──────────▼───────────┐
-                │         │   APPROACHING          │
-                │         └──────────┬───────────┘
-                │                    │
-                │         ┌──────────▼───────────┐
-                │         │   ALIGNING             │
-                │         └──────────┬───────────┘
-                │                    │
-                │         ┌──────────▼───────────┐
-                │         │   DELIVERING           │
-                │         └──────────┬───────────┘
-                │                    │ done
-                └────────────────────┘
-
-        No target found:
-        FINDING_TARGET ──► RECOVERY (360° spin) ──► FINDING_TARGET
-
-        Coverage complete / all stations done:
-        ──► DONE
-```
-
-**Parameters (nav_tuning.yaml):**
-
-| Parameter              | Value | Unit       | Description                       |
-|------------------------|-------|------------|-----------------------------------|
-| rotate_speed           | 1.75  | rad/s      | 360° spin speed                   |
-| drive_speed            | 0.15  | m/s        | Straight-line drive speed         |
-| wall_threshold         | 10    | —          | Grid value ≥ this → wall          |
-| distance_threshold     | 35    | cells      | Max Dijkstra cost for target      |
-| wall_penalty           | 5     | cells      | A* wall neighbourhood radius      |
-| wall_cost              | 200   | —          | A* cost multiplier near walls     |
-| cluster_distance       | 6     | cells      | Min waypoint spacing              |
-| localization_tolerance | 4     | cells      | Arrival tolerance                 |
-| stop_distance          | 0.25  | m          | LiDAR emergency stop distance     |
-| reset_visited_threshold| 500   | entries    | Clear visited set threshold       |
-| tag_approach_distance  | 0.35  | m          | Stop distance from tag (approach) |
-| recovery_duration      | 6.0   | s          | 360° spin time                    |
+*Note: A custom Nav2-free navigation package (`amr_nav`) was explored during
+development but ultimately removed in favour of the Nav2-based stack. The
+Dijkstra/A* algorithms and 29 unit tests are preserved in git history.*
 
 ---
 
-### 2.2  Perception Subsystem — `amr_perception`
+### 2.2  Perception Subsystem — `CDE2310_AMR_Trial_Run/apriltag_detector`
 
 **Owner:** Clara
 

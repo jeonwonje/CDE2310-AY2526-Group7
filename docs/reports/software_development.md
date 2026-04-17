@@ -104,36 +104,6 @@ Group7_AMR/
 │   │   │   └── test_pep257.py
 │   │   ├── setup.py
 │   │   └── package.xml
-│   │
-│   ├── amr_nav/                   # Custom navigation
-│   │   ├── amr_nav/
-│   │   │   ├── __init__.py
-│   │   │   └── auto_nav.py
-│   │   ├── config/
-│   │   │   ├── nav_tuning.yaml
-│   │   │   └── slam_params.yaml
-│   │   ├── launch/
-│   │   │   └── launch.py
-│   │   ├── test/
-│   │   │   └── test_pathfinding.py
-│   │   ├── setup.py
-│   │   └── package.xml
-│   │
-│   ├── amr_perception/            # AprilTag perception
-│   │   ├── amr_perception/
-│   │   │   ├── __init__.py
-│   │   │   └── apriltag_detector.py
-│   │   ├── test/
-│   │   ├── setup.py
-│   │   └── package.xml
-│   │
-│   └── amr_launcher/              # Delivery sequencing
-│       ├── amr_launcher/
-│       │   ├── __init__.py
-│       │   └── delivery_sequencer.py
-│       ├── test/
-│       ├── setup.py
-│       └── package.xml
 │
 ├── hardware/
 │   ├── chassis/                   # TurtleBot3 assembly + mounts
@@ -150,7 +120,6 @@ Group7_AMR/
 │   └── guides/                    # Developer guides
 │
 ├── data/                          # Maps, bag files, logs
-├── archive/                       # Frozen packages (not built)
 ├── CHANGELOG.md
 ├── CLAUDE.md
 ├── AGENT_GIT_GUIDE.md
@@ -308,15 +277,11 @@ cd ~/amr_ws
 colcon build --symlink-install
 
 # Build single package
-colcon build --packages-select amr_nav
+colcon build --packages-select CDE2310_AMR_Trial_Run
 
 # Run all tests
 colcon test
 colcon test-result --verbose
-
-# Run specific test file
-cd ~/amr_ws
-python3 -m pytest src/amr_nav/test/test_pathfinding.py -v
 
 # Lint check
 colcon test --packages-select auto_explore_v2  # runs flake8 + pep257
@@ -332,7 +297,7 @@ colcon test --packages-select auto_explore_v2  # runs flake8 + pep257
 | `mission.launch.py`             | CDE2310_AMR_Trial_Run | Coordinator + docking + delivery + search|
 | `full_mission.launch.py`        | CDE2310_AMR_Trial_Run | Everything: SLAM + Nav2 + mission nodes  |
 | `minimal_nav2.launch.py`        | CDE2310_AMR_Trial_Run | Minimal Nav2 for testing                 |
-| `launch.py`                     | amr_nav               | Custom nav (sim or real, no Nav2)        |
+| `gazebo_mission.launch.py`      | CDE2310_AMR_Trial_Run | Gazebo simulation with full mission      |
 
 ---
 

@@ -30,17 +30,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Subsystem design for all 6 subsystems
   - Interface control document (full ROS 2 topic/service/action catalogue)
   - Software development plan
-  - Testing documentation (29 unit tests, integration plan, FAT checklist)
+  - Testing documentation (integration plan, FAT checklist)
 - End user documentation (`docs/end_user_doc/`)
-- `amr_nav` package: custom Dijkstra/A* navigation with 29 unit tests
-
-### Changed
-- Consolidated 5 packages → 3 (`amr_nav`, `amr_perception`, `amr_launcher`)
-- Navigation no longer depends on nav2_msgs, nav2_bringup, or py_trees
 
 ### Removed
-- `amr_navigation` package (replaced by `amr_nav`)
-- `amr_bringup` package (merged into `amr_nav`)
+- `amr_nav`, `amr_perception`, `amr_launcher`, `amr_navigation`, `amr_bringup` packages (consolidated into `CDE2310_AMR_Trial_Run` and `auto_explore_v2`)
+- `archive/` directory
 - Legacy Nav2 parameter files
 
 ## [1.0.0] - 2026-03-15

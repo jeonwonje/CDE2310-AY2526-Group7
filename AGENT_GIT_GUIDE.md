@@ -26,7 +26,7 @@ ai-assisted: yes
 ```
 
 Types: feat, fix, docs, test, chore, refactor
-Scopes: navigation, perception, launcher, bringup, utils, chassis, report, conops
+Scopes: nav, explore, dock, delivery, perception, launcher, mission, hardware, report
 
 ## Colcon Workspace Rules
 
@@ -40,11 +40,8 @@ Scopes: navigation, perception, launcher, bringup, utils, chassis, report, conop
 
 | Package | Scope | Contains |
 |---|---|---|
-| amr_navigation | navigation | Frontier detection, exploration, SLAM config |
-| amr_perception | perception | AprilTag detection, camera processing |
-| amr_launcher | launcher | Ball delivery, servo control |
-| amr_bringup | bringup | Mission controller, launch files |
-| amr_utils | utils | Legacy lab exercise nodes |
+| CDE2310_AMR_Trial_Run | mission | Mission coordinator FSM, docking, delivery, search, launcher, shooter nodes |
+| auto_explore_v2 | explore | BFS frontier detection, scored Nav2 goal posting |
 
 ## Git Worktrees (for reviewers)
 

@@ -385,7 +385,6 @@ Group7_AMR/
 │   ├── reports/                   # Full SDD reports (detailed versions)
 │   └── end_user_doc/              # Printed end-user documentation
 ├── data/                          # Maps, bag files
-├── archive/                       # Frozen legacy packages
 ├── CHANGELOG.md
 └── README.md                      # ← You are here
 ```
@@ -465,16 +464,14 @@ ros2 launch CDE2310_AMR_Trial_Run full_mission.launch.py
 | Integration | Node-to-node comms | Manual + ros2 CLI | Partial |
 | System (FAT) | Full mission end-to-end | Physical maze run | No |
 
-### Unit Tests — 29 tests
+### Unit & Lint Tests
 
-Located in `src/amr_nav/test/test_pathfinding.py`. Run with `python3 -m pytest src/amr_nav/test/test_pathfinding.py -v`.
+Each package includes ament standard lint tests (flake8, pep257, copyright):
 
-| Class | Tests | Covers |
-|---|---|---|
-| TestOccupancyToGrid | 6 | Grid conversion (free, wall, unknown, thresholds) |
-| TestFindNextTarget | 8 | Dijkstra target finding (nearest, walls, distance threshold, performance) |
-| TestAstarWallPenalty | 9 | A* pathfinding (obstacles, wall bias, corridors, performance) |
-| TestClusterPath | 6 | Waypoint reduction (clustering, endpoints, edge cases) |
+```bash
+colcon test
+colcon test-result --verbose
+```
 
 ### Integration Tests
 

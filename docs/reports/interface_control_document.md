@@ -63,13 +63,6 @@ that all interfaces are correctly wired.
 | 15| `bfs_distance_transform` | `std_msgs/String` (JSON)             | find_frontiers         | score_and_post                       | Reliable, volatile   | Laptop  |
 | 16| `/nav_status`            | `std_msgs/String`                    | score_and_post         | find_frontiers                       | Best-effort, volatile | Laptop  |
 
-### 2.6  Custom Navigation Topics (amr_nav)
-
-| # | Topic                    | Message Type                          | Publisher              | Subscriber(s)                        | QoS Profile          | Machine |
-|---|--------------------------|---------------------------------------|------------------------|--------------------------------------|-----------------------|---------|
-| 17| `/map_closed`            | `std_msgs/Bool`                      | auto_nav               | (debug)                              | Reliable, volatile   | Laptop  |
-| 18| `/nav_metrics`           | `std_msgs/String` (JSON)             | auto_nav               | (debug / logging)                    | Best-effort, volatile | Laptop  |
-
 ---
 
 ## 3  Mission Command Protocol

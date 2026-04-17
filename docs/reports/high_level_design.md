@@ -83,26 +83,11 @@ src/
 │   ├── find_frontiers.py       #   BFS frontier detection + clustering
 │   └── score_and_post.py       #   Frontier scoring + Nav2 goal posting
 │
-├── CDE2310_AMR_Trial_Run/      # Mission-level coordination
-│   ├── mission_coordinator_v3.py  # Central FSM
-│   ├── docker.py               #   Geometric visual-servoing docking
-│   ├── delivery_server.py      #   Static/dynamic delivery orchestration
-│   ├── search_stations.py      #   Zone-based tag search fallback
-│   ├── launcher_node.py        #   Servo trigger (laptop-side bridge)
-│   ├── rpi_shooter_node.py     #   GPIO/PWM servo control (RPi)
-│   ├── apriltag_detector.py    #   AprilTag detection (legacy, RPi)
-│   └── static_station.py       #   Static station test utility
-│
-├── amr_nav/                    # Custom navigation (Nav2-free)
-│   ├── auto_nav.py             #   State machine + Dijkstra/A* planner
-│   ├── pathfinding.py          #   (imported by auto_nav)
-│   └── coverage_monitor.py     #   Map coverage tracking
-│
-├── amr_perception/             # Perception package
-│   └── apriltag_detector.py    #   Tag detection, solvePnP, TF broadcast
-│
-└── amr_launcher/               # Delivery sequencing
-    └── delivery_sequencer.py   #   Delivery state machine
+└── CDE2310_AMR_Trial_Run/      # Mission-level coordination
+    ├── mission_coordinator_v3.py  # Central FSM
+    ├── docker.py               #   Geometric visual-servoing docking
+    ├── delivery_server_consolidated.py  # Static/dynamic delivery orchestration
+    └── search_stations.py      #   Zone-based tag search fallback
 ```
 
 ### 3.2  Package Responsibility Matrix
@@ -111,9 +96,6 @@ src/
 |-----------------------|--------------------------------------|---------|-----------------------|
 | `auto_explore_v2`    | BFS frontiers, scored Nav2 goals     | Laptop  | Nav2, Cartographer    |
 | `CDE2310_AMR_Trial_Run` | Central FSM, docking, delivery, search | Laptop + RPi | Nav2, TF2, auto_explore_v2 |
-| `amr_nav`            | Custom Dijkstra/A* navigation        | Laptop  | Cartographer (map)    |
-| `amr_perception`     | AprilTag detection + TF broadcast    | RPi     | Camera driver, TF2    |
-| `amr_launcher`       | Delivery sequencing                  | RPi     | GPIO                  |
 
 ---
 
@@ -259,7 +241,7 @@ All coordination flows through two JSON-encoded String topics:
 | DD-03 | Discrete geometric docking instead of PID            | Eliminates gain-tuning; state machine is more debuggable.   |
 | DD-04 | BFS frontier detection (not RRT or information-gain) | Simpler to implement and debug; sufficient for maze.        |
 | DD-05 | Tag blacklisting on dock failure                     | Prevents infinite retry loops on bad-angle detections.      |
-| DD-06 | Custom Dijkstra/A* nav (amr_nav) as alternative      | Provides Nav2-free fallback; lighter on RPi standalone.     |
+| DD-06 | Custom Dijkstra/A* nav explored as alternative        | Evaluated Nav2-free fallback; ultimately stayed with Nav2.  |
 
 ---
 

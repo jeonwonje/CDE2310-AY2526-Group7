@@ -31,11 +31,11 @@ with the requirements in AMR-RS-001.
 
 ---
 
-## 3  Unit Tests — `test_pathfinding.py`
+## 3  Unit Tests
 
-**Location:** `src/amr_nav/test/test_pathfinding.py`
-**Framework:** pytest
-**Test count:** 29 tests across 4 test classes
+*Note: The `amr_nav` package containing 29 pathfinding unit tests was removed
+during the package consolidation. The test code and results are preserved in
+git history. The following documents the tests as originally designed.*
 
 ### 3.1  Test Class: `TestOccupancyToGrid`
 
@@ -100,12 +100,9 @@ Tests the waypoint reduction algorithm.
 ```bash
 cd ~/amr_ws
 
-# Via colcon
-colcon test --packages-select amr_nav
+# Run all tests
+colcon test
 colcon test-result --verbose
-
-# Via pytest directly (more detail)
-python3 -m pytest src/amr_nav/test/test_pathfinding.py -v --tb=short
 ```
 
 **Expected output (all 29 pass):**
@@ -129,9 +126,6 @@ Each package includes ament standard lint tests:
 |-----------------------|--------------------------------|-----------------------------|
 | auto_explore_v2       | flake8, pep257, copyright     | `test/test_flake8.py` etc. |
 | CDE2310_AMR_Trial_Run | flake8, pep257, copyright     | `test/test_flake8.py` etc. |
-| amr_nav               | (pathfinding tests only)       | `test/test_pathfinding.py` |
-| amr_perception        | flake8, pep257, copyright     | `test/test_flake8.py` etc. |
-| amr_launcher          | flake8, pep257, copyright     | `test/test_flake8.py` etc. |
 
 Run: `colcon test` → `colcon test-result --verbose`
 
