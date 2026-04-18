@@ -41,17 +41,17 @@ The need for this system arises from the requirement to demonstrate competence i
 - **C2:** Total system cost shall not exceed the allocated project budget.
 - **C3:** The system shall comply with all safety regulations specified in the mission brief.
 - **C4:** The launcher shall be powered entirely by the TurtleBot3 Burger's onboard Raspberry Pi 4B GPIO (no external Arduino or additional microcontroller).
-- **C5:** The system footprint shall not exceed 281 × 306 × 300 mm to remain compatible with the TurtleBot3 base.
+- **C5:** The system footprint shall not exceed 235 × 230 × 300 mm to remain compatible with the TurtleBot3 base.
 
 ### 1.2 Overview of the Envisioned System
 
 #### 1.2.1 System Overview
 
-The envisioned system is a spring-loaded ball launcher mechanism mounted on a TurtleBot3 Burger (281 × 306 × 141 mm base). The launcher uses a rack-and-pinion plunger-and-barrel assembly actuated by an SG90 continuous-rotation servo to compress and release a spring, propelling balls with deterministic, repeatable force. A 3-ball carousel/gravity-fed tube magazine feeds balls into the 42.5 mm inner-diameter barrel, and the RPi 4B running ROS 2 Humble sequences the launch timing and, for Station B, coordinates delivery with the moving receptacle via AprilTag vision (RPi Camera V2, tag36h11 family).
+The envisioned system is a spring-loaded ball launcher mechanism mounted on a TurtleBot3 Burger (235 × 230 × 24.5 mm base). The launcher uses a rack-and-pinion plunger-and-barrel assembly actuated by an MG90 continuous-rotation servo to compress and release a spring, propelling balls with deterministic, repeatable force. A 7-ball gravity-fed tube feeds balls into the 42.5 mm inner-diameter barrel, and the RPi 4B running ROS 2 Humble sequences the launch timing and, for Station B, coordinates delivery with the moving receptacle via AprilTag vision (RPi Camera V2, tag36h11 family).
 
 #### 1.2.2 System Scope
 
-The project scope encompasses the mechanical launcher subsystem (barrel, plunger, spring mechanism), the ball-feed subsystem (carousel magazine), the control and actuation subsystem (RPi 4B, SG90 servo, RPi Camera V2), and the integration platform (TurtleBot3 Burger with 3D-printed mounts). The project does not encompass the warehouse field infrastructure, the receptacle stations themselves, or the motorised rail for Station B, as these are provided by the mission organisers.
+The project scope encompasses the mechanical launcher subsystem (barrel, plunger, spring mechanism), the ball-feed subsystem (gravity-fed tube), the control and actuation subsystem (RPi 4B, MG90 servo, RPi Camera V2), and the integration platform (TurtleBot3 Burger with 3D-printed mounts). The project does not encompass the warehouse field infrastructure, the receptacle stations themselves, or the motorised rail for Station B, as these are provided by the mission organisers.
 
 ---
 
@@ -68,7 +68,7 @@ Following the G1 design process, the first step is to rigorously define the prob
 **Objectives:**
 - Achieve a total launch cycle time of ≤ 0.87 seconds per ball.
 - Maintain gentle exit velocity in the 1–2 m/s range.
-- Operate within the TurtleBot3 Burger size/weight envelope (281 × 306 × ~300 mm total with payload).
+- Operate within the TurtleBot3 Burger size/weight envelope (235 × 230 × ~300 mm total with payload).
 - Require no human intervention once the mission begins.
 - Complete all deliveries within the 25-minute mission window.
 
@@ -81,10 +81,10 @@ Requirements are written as unambiguous, singular, verifiable "shall" statements
 | SYS-001 | The system shall deliver 3 balls to Station A within 15 seconds total cycle time (including 4 s and 6 s inter-delivery gaps). | Cycle time ≤ 15 s | Test |
 | SYS-002 | The system shall achieve a ball exit velocity of 1–2 m/s (±0.2 m/s). | Measured velocity via high-speed video | Test |
 | SYS-003 | The system shall deliver balls to Station B's moving receptacle with ≥ 67% hit rate (2 out of 3 balls). | Hit rate % | Test / Demo |
-| SYS-004 | The system shall fit within a footprint of 281 × 306 × 300 mm (on TurtleBot3 base). | Measured dimensions | Inspection |
+| SYS-004 | The system shall fit within a footprint of 235 × 230 × 300 mm (on TurtleBot3 base). | Measured dimensions | Inspection |
 | SYS-005 | All 3D-printed components shall be manufacturable on a standard FDM printer with ≤ 0.3 mm tolerance compensation. | Dimensional accuracy | Inspection |
 | SYS-006 | The launcher shall fire one ball per cycle in ≤ 0.87 seconds. | Time per cycle | Test |
-| SYS-007 | The magazine shall hold a minimum of 3 balls without manual reloading. | Ball capacity count | Inspection |
+| SYS-007 | The feed tube shall hold a minimum of 7 balls without manual reloading. | Ball capacity count | Inspection |
 | SYS-008 | The system shall detect AprilTag ID 3 (tag36h11 family) on the Station B rail and fire reactively with a minimum 4-second cooldown between shots. | Detection latency, cooldown enforcement | Test |
 | SYS-009 | The launcher shall be controlled entirely via RPi 4B GPIO (pin 12, 50 Hz PWM) without an external microcontroller. | Hardware inspection | Inspection |
 
@@ -121,7 +121,7 @@ A review of ball-launching mechanisms reveals several established approaches use
 
 ### 3.2 Feed and Magazine Systems
 
-Ball feed mechanisms reviewed include gravity-fed hoppers with agitator paddles, spring-loaded tube magazines, and rotary indexing drums. For a low-volume application (3 balls), a simple gravity-fed tube magazine with a servo-controlled carousel gate offers the best balance of reliability and simplicity. The carousel indexes one ball at a time into the barrel bore under gravity, ensuring consistent positioning before each shot.
+Ball feed mechanisms reviewed include gravity-fed hoppers with agitator paddles, spring-loaded tube magazines, and rotary indexing drums. For this application (7 balls), a simple gravity-fed tube offers the best balance of reliability and simplicity. Balls drop one at a time into the barrel bore under gravity, ensuring consistent positioning before each shot.
 
 ### 3.3 Sensing and Tracking Technologies
 
@@ -146,7 +146,7 @@ Key findings from the literature and prior team experience with FDM printing inc
 - TurtleBot3 Burger technical specifications (ROBOTIS e-Manual).
 - ROS 2 Humble Hawksbill documentation (docs.ros.org).
 - AprilTag: A robust and flexible visual fiducial system — Olson, E. (2011), IEEE ICRA.
-- SG90 Micro Servo datasheet (Tower Pro).
+- MG90 Micro Servo datasheet (Tower Pro).
 
 ---
 
@@ -156,13 +156,13 @@ Following the literature review, the team brainstorms and develops multiple cand
 
 ### 4.1 Concept A — Spring-Loaded Plunger Launcher
 
-This concept uses a linear spring compressed by a servo-driven rack-and-pinion mechanism. The SG90 continuous-rotation servo (GPIO 12, 50 Hz PWM, duty cycle 10.0 for CCW) drives a pinion gear that advances a rack, compressing the spring against the plunger. Upon release, the plunger (40 mm shaft diameter) travels through a 42.5 mm inner-diameter barrel, propelling the 40 mm ball. Key features include:
+This concept uses a linear spring compressed by a servo-driven rack-and-pinion mechanism. The MG90 continuous-rotation servo (GPIO 12, 50 Hz PWM, duty cycle 10.0 for CCW) drives a pinion gear that advances a rack, compressing the spring against the plunger. Upon release, the plunger (40 mm shaft diameter) travels through a 42.5 mm inner-diameter barrel, propelling the 40 mm ball. Key features include:
 
 - 40 mm diameter plunger shaft for centring within the barrel.
 - 2.5 mm total clearance between ball and barrel wall (1.25 mm per side).
 - Chamfered barrel entry to prevent ball jamming.
 - Spring constant and compression distance selected to achieve 1–2 m/s exit velocity.
-- Gravity-fed tube magazine (3-ball capacity) with carousel indexing gate to release one ball at a time.
+- Gravity-fed tube (7-ball capacity) drops one ball at a time into the barrel.
 - Complete launch cycle time of 0.87 seconds per ball.
 
 ### 4.2 Concept B — Dual-Flywheel Launcher
@@ -188,7 +188,7 @@ This concept uses a small air reservoir and solenoid valve to deliver a controll
 | Subsystem | Concept A | Concept B | Concept C | Selected |
 |---|---|---|---|---|
 | Launcher | Spring plunger (rack-and-pinion servo release) | Dual flywheel (counter-rotating DC motors) | Pneumatic piston (solenoid + air reservoir) | Concept A |
-| Feed System | Gravity-fed tube magazine + carousel gate (3-ball) | Spring pusher + hopper | Manual load per shot | Concept A |
+| Feed System | Gravity-fed tube (7-ball) | Spring pusher + hopper | Manual load per shot | Concept A |
 | Aiming | Fixed mount on TurtleBot3 + shim adjustment | Pan-tilt servo platform | Rail-mounted sliding bracket | Concept A |
 | Sensing (Stn B) | Computer vision (RPi Camera V2 + AprilTag 36h11) | Time-of-flight sensor | Pre-programmed open-loop timing | Concept A (vision) |
 | Control | RPi 4B + ROS 2 Humble + GPIO servo control | Arduino + ESC motor control | Arduino + solenoid driver | Concept A (RPi) |
@@ -240,14 +240,14 @@ The team reviewed all three concepts with cross-disciplinary input from mechanic
 
 - **Determinism was the decisive factor.** The spring-plunger mechanism stores a fixed amount of energy (½kx²) and releases it identically each cycle. The flywheel concept's friction-dependent grip on a 2.7 g ball introduced unacceptable variability in exit velocity. The pneumatic concept's sealing tolerances made pressure consistency difficult to guarantee.
 - **Manufacturability strongly favoured Concept A.** The barrel, plunger, and rack-and-pinion gears are straightforward FDM prints. The flywheel concept requires precise wheel spacing and balanced motors. The pneumatic concept requires airtight seals — difficult to achieve with FDM.
-- **Power budget was a concern.** Concept A requires only a single SG90 servo (powered from RPi GPIO), whereas the flywheel needs two DC motors and ESCs, and the pneumatic needs a pump or pre-charged reservoir.
+- **Power budget was a concern.** Concept A requires only a single MG90 servo (powered from RPi GPIO), whereas the flywheel needs two DC motors and ESCs, and the pneumatic needs a pump or pre-charged reservoir.
 - **Shashwat raised the binding risk** for Concept A (3D-printed barrel/plunger fit). The team agreed to mitigate this with 0.3 mm FDM tolerance compensation and post-print sanding — a known, manageable risk.
 
 Based on the trade study, the team selects **Concept A (Spring-Loaded Plunger Launcher)** for advancement to Preliminary Design. Key rationale:
 
 1. Highest determinism and repeatability — critical for mission scoring.
 2. Simplest mechanical design — fewest moving parts, lowest failure modes.
-3. Lowest power consumption — single SG90 servo, no additional motor drivers.
+3. Lowest power consumption — single MG90 servo, no additional motor drivers.
 4. Best manufacturability — all components are straightforward FDM prints with known tolerance compensation strategies.
 
 ---
@@ -260,13 +260,13 @@ The preliminary design elaborates the selected concept (Concept A — Spring-Loa
 
 The system is decomposed into the following major subsystems:
 
-- **Launcher Subsystem:** A 42.5 mm inner-diameter barrel houses a 40 mm plunger shaft. A compressed spring is loaded via a rack-and-pinion mechanism driven by an SG90 continuous-rotation servo. The servo drives the pinion gear (CCW at duty cycle 10.0), which advances the rack to compress the spring. Upon full compression, the rack disengages and the spring propels the plunger forward, launching the ball. The spring constant and compression distance are tuned to yield 1–2 m/s exit velocity. Chamfered barrel entry prevents ball jamming. FDM tolerance compensation of 0.3 mm is applied to all sliding interfaces.
+- **Launcher Subsystem:** A 42.5 mm inner-diameter barrel houses a 40 mm plunger shaft. A compressed spring is loaded via a rack-and-pinion mechanism driven by an MG90 continuous-rotation servo. The servo drives the pinion gear (CCW at duty cycle 10.0), which advances the rack to compress the spring. Upon full compression, the rack disengages and the spring propels the plunger forward, launching the ball. The spring constant and compression distance are tuned to yield 1–2 m/s exit velocity. Chamfered barrel entry prevents ball jamming. FDM tolerance compensation of 0.3 mm is applied to all sliding interfaces.
 
-- **Ball Feed Subsystem:** A 3-ball carousel/gravity-fed tube magazine sits above the barrel. Balls (40 mm diameter, ~2.7 g) are gravity-indexed into the barrel bore one at a time via a carousel gate mechanism. The gate is integrated with the servo actuation cycle — as the rack retracts to cock the spring, the carousel rotates to position the next ball. Magazine capacity of 3 balls is sufficient for both Station A (3 required) and Station B (3 maximum attempts).
+- **Ball Feed Subsystem:** A 7-ball gravity-fed tube sits above the barrel. Balls (40 mm diameter, ~2.7 g) drop into the barrel bore one at a time under gravity as each shot clears the chamber. Capacity of 7 balls provides 3 per station plus 1 spare.
 
-- **Control Subsystem:** The Raspberry Pi 4B serves as the sole controller, running ROS 2 Humble. The `rpi_shooter_node` drives the SG90 servo via GPIO pin 12 at 50 Hz PWM. For Station A, the `delivery_server` node executes a timed sequence (fire → 4 s wait → fire → 6 s wait → fire). For Station B, the `delivery_server` subscribes to `/detections` (AprilTagDetectionArray), and upon detecting tag ID 3, calls the `/fire_ball` service with a 4-second cooldown between shots. The RPi Camera V2 feeds `/camera/image_raw` to the `apriltag_detector` node, which performs real-time tag36h11 detection and 6-DOF pose estimation via `cv2.solvePnP`.
+- **Control Subsystem:** The Raspberry Pi 4B serves as the sole controller, running ROS 2 Humble. The consolidated `delivery_server` node drives the MG90 servo directly via GPIO pin 12 at 50 Hz PWM — no separate shooter node. For Station A, the delivery server executes a timed sequence (fire → 4 s wait → fire → 6 s wait → fire). For Station B, it subscribes to `/detections` (AprilTagDetectionArray), and upon detecting tag ID 3 within the pixel crosshair window, fires reactively with a 4-second cooldown between shots. The RPi Camera V2 feeds `/camera/image_raw` to the `apriltag_detector` node, which performs real-time tag36h11 detection and 6-DOF pose estimation via `cv2.solvePnP`.
 
-- **Structural Platform:** The TurtleBot3 Burger (281 × 306 × 141 mm) serves as the base platform. 3D-printed mounts and guides secure the launcher assembly to the TurtleBot3's top plate. The total system height including the launcher and magazine is approximately 300 mm. Daniel's CAD assembly ensures all mechanical interfaces are dimensionally consistent and printable.
+- **Structural Platform:** The TurtleBot3 Burger (235 × 230 × 24.5 mm) serves as the base platform. 3D-printed mounts and guides secure the launcher assembly to the TurtleBot3's top plate. The total system height including the launcher and magazine is approximately 300 mm. Daniel's CAD assembly ensures all mechanical interfaces are dimensionally consistent and printable.
 
 ### 6.2 Key Design Parameters
 
@@ -276,15 +276,15 @@ The system is decomposed into the following major subsystems:
 | Ball mass | ~2.7 g | Standard table-tennis ball spec (A2). |
 | Barrel inner diameter | 42.5 mm | 2.5 mm total clearance to prevent jamming (SYS-005). |
 | Plunger shaft diameter | 40 mm | Centring within barrel; 0.3 mm FDM compensation applied (SYS-005). |
-| Servo model | SG90 continuous rotation | Low cost, sufficient torque for rack-and-pinion cocking. |
+| Servo model | MG90 continuous rotation | Low cost, sufficient torque for rack-and-pinion cocking. |
 | Servo GPIO pin | 12 (BCM) | RPi 4B hardware PWM-capable pin (SYS-009). |
 | PWM frequency | 50 Hz | Standard servo control frequency. |
 | CCW duty cycle | 10.0 | Calibrated for consistent rack advance speed. |
 | Time per launch cycle | 0.87 s | Measured; satisfies SYS-006. |
 | Target exit velocity | 1–2 m/s | SYS-002; gentle delivery per mission brief. |
-| Magazine capacity | 3 balls | Sufficient for Station A (3 balls) and Station B (3 attempts) (SYS-007). |
+| Feed tube capacity | 7 balls | 3 per station + 1 spare (SYS-007). |
 | FDM tolerance compensation | −0.3 mm | Modelled parts 0.3 mm undersized to account for FDM expansion (SYS-005). |
-| System footprint | 281 × 306 × ~300 mm | On TurtleBot3 Burger base with launcher payload (SYS-004). |
+| System footprint | 235 × 230 × ~300 mm | On TurtleBot3 Burger base with launcher payload (SYS-004). |
 | Station A inter-delivery gaps | 4 s, then 6 s | Per mission brief timing requirements (SYS-001). |
 | Station B cooldown | 4.0 s | Minimum wait between reactive shots (SYS-008). |
 | Station B target tag | AprilTag ID 3 (tag36h11) | Per mission brief; detected by RPi Camera V2 (SYS-008). |
@@ -295,19 +295,19 @@ The system is decomposed into the following major subsystems:
 
 #### 6.3.1 Nominal Operation — Station A (Stationary Target)
 
-The mission coordinator sends `START_DELIVERY` with target `tag36h11:0` to the delivery server. The delivery server executes the static delivery sequence: it calls the `/fire_ball` service on the RPi shooter node to fire the first ball, waits 4 seconds, fires the second ball, waits 6 seconds, then fires the third ball. Each fire call triggers the SG90 servo to rotate CCW (duty 10.0) for 0.87 seconds, which cocks and releases the spring-loaded plunger, launching one ball from the magazine through the barrel. Upon completion of all 3 shots, the delivery server publishes `DELIVERY_COMPLETE` on `/mission_status`. Total Station A delivery time is approximately 11.7 seconds (0.87 + 4.0 + 0.87 + 6.0 + 0.87 s).
+The mission coordinator sends `START_DELIVERY` with target `tag36h11:0` to the delivery server. The consolidated delivery server directly controls the MG90 servo via GPIO to fire the first ball, waits 4 seconds, fires the second ball, waits 6 seconds, then fires the third ball. Each fire cycle triggers the servo to rotate CCW (duty 10.0), launching one ball from the feed tube through the barrel. Upon completion of all 3 shots, the delivery server publishes `DELIVERY_COMPLETE` on `/mission_status`. Total Station A delivery time is approximately 14 seconds.
 
 #### 6.3.2 Nominal Operation — Station B (Moving Target)
 
-The mission coordinator sends `START_DELIVERY` with target `tag36h11:2` to the delivery server. The delivery server activates dynamic delivery mode and subscribes to `/detections` from the `apriltag_detector` node. The RPi Camera V2 continuously captures frames, which the detector processes for tag36h11 markers. When AprilTag ID 3 (mounted on the moving rail carriage) enters the camera's field of view and is detected, the delivery server calls `/fire_ball` and enters a 4-second cooldown period. During cooldown, further detections are ignored. After cooldown expires, the system is ready for the next reactive shot. This repeats for up to 3 shots. Upon firing 3 balls or upon mission coordinator timeout, `DELIVERY_COMPLETE` is published.
+The mission coordinator sends `START_DELIVERY` with target `tag36h11:2` to the delivery server. The delivery server activates dynamic delivery mode and subscribes to `/detections` from the `apriltag_detector` node. The RPi Camera V2 continuously captures frames, which the detector processes for tag36h11 markers. When AprilTag ID 3 (mounted on the moving rail carriage) enters the camera's field of view and its center pixel falls within ±50 px of the crosshair (x = 320), the delivery server fires directly via GPIO and enters a 4-second cooldown period. During cooldown, further detections are ignored. After cooldown expires, the system is ready for the next reactive shot. This repeats for up to 3 shots. Upon firing 3 balls or upon mission coordinator timeout, `DELIVERY_COMPLETE` is published.
 
 #### 6.3.3 Off-Nominal / Failure Scenarios
 
 - **Ball jam in barrel (R1):** Plunger binds due to FDM tolerance issues. Mitigated by 0.3 mm tolerance compensation in CAD and post-print sanding of barrel interior. During testing, this risk materialised and was successfully resolved with these mitigations.
-- **Feed gate failure:** Carousel fails to index next ball. Backup: operator manually loads ball during pre-mission setup if mechanism is unreliable.
+- **Feed tube jam:** Ball fails to drop into barrel. Mitigated by gravity-fed design with sufficient tube clearance.
 - **Sensor failure — Station B (R3):** Camera feed drops or AprilTag detection fails. Fallback: pre-programmed timing mode based on characterised rail speed profile (open-loop). During development, the team confirmed AprilTag vision was reliable and did not need to deploy the fallback.
 - **Spring fatigue (R2):** Spring provides inconsistent force after repeated cycles. Mitigated by selecting a quality spring, characterising fatigue behaviour in testing, and carrying a spare spring in the kit.
-- **Servo stall / overload:** SG90 servo stalls during rack-and-pinion cocking. The `rpi_shooter_node` enforces a threading lock to prevent concurrent fire commands and a `MAX_BALLS = 3` counter to prevent over-cycling.
+- **Servo stall / overload:** MG90 servo stalls during rack-and-pinion cocking. The consolidated delivery server enforces a threading lock to prevent concurrent fire commands and a `max_dynamic_shots = 3` counter to prevent over-cycling.
 
 ---
 
@@ -316,7 +316,7 @@ The mission coordinator sends `START_DELIVERY` with target `tag36h11:2` to the d
 Prior to PDR, the team validated the preliminary design against the system requirements (Table 1) through the following methods:
 
 - **Analytical calculation** of spring energy and exit velocity vs. SYS-002: ½kx² energy budget confirmed to yield 1–2 m/s for the selected spring constant and compression distance, given the 2.7 g ball mass.
-- **CAD interference and tolerance stack-up analysis** vs. SYS-004 and SYS-005: Daniel's CAD assembly verified all parts fit within the 281 × 306 × 300 mm envelope with no interferences.
+- **CAD interference and tolerance stack-up analysis** vs. SYS-004 and SYS-005: Daniel's CAD assembly verified all parts fit within the 235 × 230 × 300 mm envelope with no interferences.
 - **Prototype barrel/plunger fit check** via test prints: Initial prints confirmed binding risk (R1). After applying 0.3 mm tolerance compensation and sanding barrel interiors, smooth sliding fit was achieved.
 - **Functional firing test:** Measured launch cycle time of 0.87 seconds per ball (SYS-006) and exit velocity in the 1–2 m/s range (SYS-002) using high-speed video analysis.
 - **AprilTag detection validation:** Confirmed reliable detection of tag36h11 ID 3 at Station B operating distances using the RPi Camera V2 and `cv2.solvePnP` pose estimation.
@@ -330,8 +330,8 @@ Prior to PDR, the team validated the preliminary design against the system requi
 | R1 | 3D-printed parts bind due to insufficient clearance between plunger (40 mm) and barrel (42.5 mm ID). | Medium | High | Design with 0.3 mm FDM compensation; test-print fit checks early; sand barrel interior post-print. | Realised and resolved — sanding + tolerance compensation eliminated binding. |
 | R2 | Spring provides inconsistent force over repeated launch cycles due to fatigue. | Low | High | Select quality spring; characterise fatigue behaviour over 50+ cycles; carry spare spring in kit. | Monitored — no degradation observed in testing. |
 | R3 | Moving target tracking (Station B) proves unreliable with reactive vision approach. | Medium | Medium | Primary: AprilTag vision (RPi Camera V2 + tag36h11 ID 3). Fallback: pre-programmed open-loop timing based on rail speed characterisation. | Resolved — AprilTag vision selected and validated; open-loop fallback available but not needed. |
-| R4 | Budget overrun due to component sourcing delays for servo, spring, or camera module. | Low | Medium | Identify alternative suppliers; order critical items (SG90 servo, RPi Camera V2) early in project timeline. | Mitigated — all components sourced on schedule. |
-| R5 | Carousel magazine fails to reliably index balls into barrel bore. | Low | Medium | Gravity-fed design minimises moving parts; test with actual 40 mm ping pong balls early; adjust carousel gate clearances if needed. | Monitored — reliable in testing with 3-ball loads. |
+| R4 | Budget overrun due to component sourcing delays for servo, spring, or camera module. | Low | Medium | Identify alternative suppliers; order critical items (MG90 servo, RPi Camera V2) early in project timeline. | Mitigated — all components sourced on schedule. |
+| R5 | Gravity-fed tube fails to reliably drop balls into barrel bore. | Low | Medium | Gravity-fed design minimises moving parts; test with actual 40 mm ping pong balls early; adjust tube clearances if needed. | Monitored — reliable in testing with 7-ball loads. |
 
 *Table 6: Risk Register.*
 
@@ -341,7 +341,7 @@ Prior to PDR, the team validated the preliminary design against the system requi
 
 This CONOPS document has outlined the problem definition, system requirements, literature review findings, candidate concepts, BOGAT trade-study evaluation, and preliminary design for the CDE2310 Warehouse Delivery Mission ping pong ball launcher system. The selected concept — **Concept A (Spring-Loaded Plunger Launcher)** — provides the best balance of deterministic performance, manufacturability, and controllability as validated through the weighted decision matrix (score: 4.45/5.00, versus 2.90 for dual flywheel and 2.50 for pneumatic).
 
-The system integrates a rack-and-pinion servo-driven spring release, a 3-ball carousel magazine, and RPi Camera V2 AprilTag vision — all controlled by the Raspberry Pi 4B running ROS 2 Humble — mounted on the TurtleBot3 Burger platform within a 281 × 306 × ~300 mm footprint.
+The system integrates a rack-and-pinion servo-driven spring release, a 7-ball gravity-fed tube, and RPi Camera V2 AprilTag vision — all controlled by the Raspberry Pi 4B running ROS 2 Humble — mounted on the TurtleBot3 Burger platform within a 235 × 230 × ~300 mm footprint.
 
 **Immediate next steps:**
 1. Complete the preliminary design documentation and prepare for the 20-minute Preliminary Design Review (PDR) presentation.

@@ -133,12 +133,12 @@ The docking server replaces continuous PID control with a 3-phase discrete
 state machine:
 
 ```
-  Nav2 staging goal (0.60 m from tag)
+  Nav2 staging goal (0.40 m from tag)
          │
          ▼
   ┌──────────────────┐
   │  INTERCEPT        │  Drive at a slant to reduce lateral (Y) error.
-  │                   │  Y tolerance: 0.02 m
+  │                   │  Y tolerance: 0.03 m
   │  Abort boundary:  │  If X < abort_ratio × staging → backup
   └────────┬──────────┘
            │ Y error ≤ tolerance
@@ -160,11 +160,11 @@ state machine:
 
 | Parameter              | Value  | Unit  | Description                            |
 |------------------------|--------|-------|----------------------------------------|
-| staging_distance       | 0.60   | m     | Nav2 drop-off distance from tag        |
+| staging_distance       | 0.40   | m     | Nav2 drop-off distance from tag        |
 | stop_distance          | 0.10   | m     | Final approach stop from tag           |
 | intercept_ratio        | 0.6    | —     | Dynamic lookahead fraction             |
 | abort_ratio            | 0.3    | —     | Hard safety boundary fraction          |
-| intercept_y_tolerance  | 0.02   | m     | Centreline alignment tolerance         |
+| intercept_y_tolerance  | 0.03   | m     | Centreline alignment tolerance         |
 | square_yaw_tolerance   | 0.05   | rad   | Yaw alignment tolerance                |
 | slow_linear_speed      | 0.03   | m/s   | Approach speed                         |
 | max_angular_speed      | (cap)  | rad/s | Rotation speed cap                     |
@@ -183,9 +183,9 @@ state machine:
 
 ### 2.4  Delivery Subsystem
 
-**Owner:** Clara (launcher_node, rpi_shooter_node), Jeon (delivery_server)
+**Owner:** Clara (launcher), Jeon (delivery_server)
 
-#### 2.4.1  delivery_server (`CDE2310_AMR_Trial_Run/delivery_server.py`)
+#### 2.4.1  delivery_server (`CDE2310_AMR_Trial_Run/delivery_server_consolidated.py`)
 
 **Purpose:** Orchestrate ball delivery for both static and dynamic stations.
 
@@ -210,14 +210,14 @@ state machine:
 | max_dynamic_shots  | 3     | —    | Maximum shots at dynamic station    |
 | TARGET_TAG_ID      | 3     | —    | Tag ID for dynamic station target   |
 
-#### 2.4.2  rpi_shooter_node (`CDE2310_AMR_Trial_Run/rpi_shooter_node.py`)
+#### 2.4.2  Servo Control (consolidated in delivery_server)
 
-**Purpose:** Provide the `/fire_ball` service on the RPi. Activates the
-continuous-rotation servo via GPIO PWM to fire one ball per call.
+The delivery_server directly controls the MG90 servo via GPIO 12 (hardware PWM)
+on the RPi. There is no separate shooter node or `/fire_ball` service.
 
 **Mechanism:** Servo rotates the spur gear, which drives the rack-and-pinion
 plunger. The plunger compresses the spring and releases, propelling the ball
-out of the barrel. The carousel indexes to the next ball.
+out of the barrel via a gravity-fed tube (7-ball capacity).
 
 ---
 

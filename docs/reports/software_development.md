@@ -85,10 +85,9 @@ Group7_AMR/
 │   │   │   ├── __init__.py
 │   │   │   ├── mission_coordinator_v3.py
 │   │   │   ├── docker.py
-│   │   │   ├── delivery_server.py
+│   │   │   ├── delivery_server_consolidated.py
 │   │   │   ├── search_stations.py
 │   │   │   ├── launcher_node.py
-│   │   │   ├── rpi_shooter_node.py
 │   │   │   ├── apriltag_detector.py
 │   │   │   └── static_station.py
 │   │   ├── config/

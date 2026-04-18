@@ -53,7 +53,7 @@ that all interfaces are correctly wired.
 | # | Topic                    | Message Type                          | Publisher              | Subscriber(s)                        | QoS Profile          | Machine |
 |---|--------------------------|---------------------------------------|------------------------|--------------------------------------|-----------------------|---------|
 | 12| `/mission_command`       | `std_msgs/String` (JSON)             | mission_coordinator    | docker, delivery_server, search_stations | Reliable, volatile | Laptop  |
-| 13| `/mission_status`        | `std_msgs/String` (JSON)             | docker, delivery_server, search_stations, score_and_post | mission_coordinator | Reliable, volatile | Both |
+| 13| `/mission_status`        | `std_msgs/String` (JSON)             | docker, delivery_server (as deliverer), search_stations, score_and_post | mission_coordinator | Reliable, volatile | Both |
 
 ### 2.5  Exploration-Internal Topics
 
@@ -118,7 +118,7 @@ All commands are JSON-encoded `std_msgs/String` messages on `/mission_command`.
 | # | Service              | Type                   | Server                | Client(s)              | Machine |
 |---|----------------------|------------------------|-----------------------|------------------------|---------|
 | 1 | `toggle_exploration` | `std_srvs/SetBool`    | score_and_post        | mission_coordinator    | Laptop  |
-| 2 | `/fire_ball`         | `std_srvs/Trigger`    | rpi_shooter_node      | delivery_server        | RPi     |
+
 
 ### 4.1  Service Details
 
@@ -127,11 +127,10 @@ All commands are JSON-encoded `std_msgs/String` messages on `/mission_command`.
 - `request.data = false` → pause (cancel active Nav2 goal, stop posting new goals).
 - `response.success` always `true`; `response.message` confirms the toggle state.
 
-**`/fire_ball` (Trigger):**
-- Request: empty.
-- Response: `success = true` if servo activation completed; `message` contains
-  shot count or error detail.
-- The servo runs for a fixed PWM duration to complete one fire cycle.
+**delivery_server (consolidated):**
+The delivery_server directly controls the MG90 servo via GPIO 12 on the RPi.
+It handles both shot orchestration and hardware control — there is no separate
+shooter node or `/fire_ball` service.
 
 ---
 
@@ -199,8 +198,7 @@ ignored to prevent acting on "ghost" detections.
 
 | Pin     | Function              | Connected To               | Protocol     |
 |---------|-----------------------|----------------------------|--------------|
-| GPIO 18 | PWM output            | Continuous-rotation servo   | Hardware PWM |
-| GPIO 23 | Digital output        | Carousel motor enable       | GPIO         |
+| GPIO 12 | PWM output            | MG90 servo (launcher)       | Hardware PWM |
 | GND     | Common ground         | Servo, motor, buck converter| —            |
 
 ### 7.2  Serial / USB
@@ -275,7 +273,7 @@ export FASTRTPS_DEFAULT_PROFILES_FILE=/path/to/fastdds_profile.xml
 | 3 | `/map` published by Cartographer    | Visualise in RViz                            | ☐     |
 | 4 | `/cmd_vel` reaches OpenCR           | Send manual Twist, observe wheel motion      | ☐     |
 | 5 | `toggle_exploration` service        | `ros2 service call` SetBool                  | ☐     |
-| 6 | `/fire_ball` service on RPi         | `ros2 service call /fire_ball Trigger`       | ☐     |
+| 6 | delivery_server servo on RPi        | Start delivery_server, verify GPIO 12 servo fires | ☐     |
 | 7 | TF: `camera_link → tag36h11:0`     | Hold tag in front of camera, check `tf2_echo`| ☐     |
 | 8 | `/mission_command` propagation      | Publish test JSON, verify subscriber logs    | ☐     |
 | 9 | DDS cross-machine discovery         | `ros2 node list` on both machines            | ☐     |

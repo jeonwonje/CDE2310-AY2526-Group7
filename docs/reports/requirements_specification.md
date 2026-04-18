@@ -70,7 +70,7 @@ a custom spring-loaded launcher payload.
 
 | ID       | Requirement                                                                 | Traces to |
 |----------|-----------------------------------------------------------------------------|-----------|
-| FR-DCK-01 | The AMR shall navigate to a staging point 0.60 m in front of the detected tag using Nav2 NavigateToPose. | ConOps §5.5 |
+| FR-DCK-01 | The AMR shall navigate to a staging point 0.40 m in front of the detected tag using Nav2 NavigateToPose. | ConOps §5.5 |
 | FR-DCK-02 | The AMR shall execute a discrete geometric visual-servoing sequence (intercept → square-up → final plunge) to dock within 0.10 m of the tag. | ConOps §5.5 |
 | FR-DCK-03 | If docking fails, the coordinator shall blacklist the tag for 30 s and resume exploration. | ConOps §5.5 |
 | FR-DCK-04 | The docking server shall abort if the total docking time exceeds 180 s. | ConOps §5.5 |
@@ -81,7 +81,7 @@ a custom spring-loaded launcher payload.
 |----------|-----------------------------------------------------------------------------|-----------|
 | FR-DEL-01 | At a **static station** (tag36h11:0), the AMR shall fire 3 balls in a timed sequence (fire → 4 s wait → fire → 6 s wait → fire). | ConOps §5.6 |
 | FR-DEL-02 | At a **dynamic station** (tag36h11:2), the AMR shall detect the passing target (tag ID 3), fire on detection, and repeat up to 3 shots with a 4 s cooldown. | ConOps §5.6 |
-| FR-DEL-03 | The launcher shall use a `/fire_ball` service (std_srvs/Trigger) to activate the servo-driven mechanism. | ConOps §5.6 |
+| FR-DEL-03 | The delivery_server shall directly control the MG90 servo via GPIO 12 to activate the launcher mechanism. | ConOps §5.6 |
 
 ### 4.5  Mission Coordination
 
@@ -99,11 +99,11 @@ a custom spring-loaded launcher payload.
 |----------|-------------|--------------------------------------------------------------------|
 | NFR-01   | Timing      | The full mission shall complete within 25 minutes.                 |
 | NFR-02   | Timing      | Tag detection latency shall not exceed 100 ms per frame at 10 Hz. |
-| NFR-03   | Accuracy    | Docking lateral error (Y-offset) shall be ≤ 0.02 m at final stop. |
+| NFR-03   | Accuracy    | Docking lateral error (Y-offset) shall be ≤ 0.03 m at final stop. |
 | NFR-04   | Accuracy    | Docking yaw error shall be ≤ 0.05 rad (≈ 3°) at final stop.      |
 | NFR-05   | Reliability | The system shall tolerate camera dropout for up to 1.0 s during docking without aborting. |
 | NFR-06   | Reliability | The system shall handle Nav2 goal rejection by applying a fallback staging offset (−0.15 m). |
-| NFR-07   | Power       | The RPi and launcher shall operate from the TurtleBot3 12 V battery via buck converter for the full mission duration. |
+| NFR-07   | Power       | The RPi and launcher shall operate from the TurtleBot3 11.1 V LiPo battery via buck converter for the full mission duration. |
 | NFR-08   | Comms       | DDS discovery between RPi and laptop shall use FastDDS unicast (no multicast). |
 
 ---
@@ -114,7 +114,7 @@ a custom spring-loaded launcher payload.
 |--------|--------------------------------------------------------------------------------|
 | CON-01 | Mission duration: 25 minutes maximum.                                          |
 | CON-02 | Maze dimensions: provided by NUS EDIC at competition time; walls ≥ 0.3 m high.|
-| CON-03 | Delivery payload: exactly 3 ping-pong balls per mission.                       |
+| CON-03 | Delivery payload: 7 ping-pong balls (3 per station + 1 spare).                       |
 | CON-04 | Platform: TurtleBot3 Burger (ROBOTIS); no structural modification to base.     |
 | CON-05 | Software: ROS 2 Humble on Ubuntu 22.04 (RPi and laptop).                      |
 | CON-06 | Communication: Wi-Fi link between RPi and laptop; no tethered connection.      |

@@ -46,10 +46,10 @@ and actuation run on the Raspberry Pi mounted to the robot.
 │  │  │   (frontiers → goals)   │        │  │  │  (shot orchestration) │  │  │
 │  │  └────────────┬────────────┘        │  │  └───────────────────────┘  │  │
 │  │               │                     │  │                             │  │
-│  │  ┌────────────▼────────────┐        │  │  ┌───────────────────────┐  │  │
-│  │  │   mission_coordinator   │        │  │  │  rpi_shooter_node     │  │  │
-│  │  │   (central FSM)         │        │  │  │  (GPIO/servo PWM)     │  │  │
-│  │  └─────────────────────────┘        │  │  └───────────────────────┘  │  │
+│  │  ┌────────────▼────────────┐        │  │                             │  │
+│  │  │   mission_coordinator   │        │  │                             │  │
+│  │  │   (central FSM)         │        │  │                             │  │
+│  │  └─────────────────────────┘        │  │                             │  │
 │  │                                     │  │                             │  │
 │  │  ┌─────────────────────────┐        │  │                             │  │
 │  │  │   docking_server        │        │  │                             │  │
@@ -123,10 +123,8 @@ src/
       ▼                docking_server
  Nav2 NavigateToPose        │
       │                     ▼
-      ▼                delivery_server
- /cmd_vel → OpenCR          │
-                            ▼
-                       rpi_shooter_node → GPIO → Servo → Ball
+      ▼                delivery_server (GPIO 12 → MG90 Servo → Ball)
+ /cmd_vel → OpenCR
 ```
 
 ### 4.2  Command / Status Bus
@@ -160,7 +158,7 @@ All coordination flows through two JSON-encoded String topics:
 | `/cmd_vel`           | Twist                | Nav2, docking_server   | OpenCR (motor driver)           |
 | `/camera/image_raw`  | Image                | RPi camera driver      | apriltag_detector               |
 | `/mission_command`   | String (JSON)        | mission_coordinator    | docker, delivery_server, search |
-| `/mission_status`    | String (JSON)        | docker, delivery, search, explorer | mission_coordinator  |
+| `/mission_status`    | String (JSON)        | docker, deliverer, search, explorer | mission_coordinator  |
 | `/marker_detection`  | String (JSON)        | apriltag_detector      | (debug / logging)               |
 | `/goal_pose`         | PoseStamped          | score_and_post         | Nav2 planner                    |
 | `/detections`        | AprilTagDetectionArray | apriltag (RPi)       | delivery_server                 |
@@ -171,7 +169,6 @@ All coordination flows through two JSON-encoded String topics:
 | Service              | Type        | Server               | Client                |
 |----------------------|-------------|----------------------|-----------------------|
 | `toggle_exploration` | SetBool     | score_and_post       | mission_coordinator   |
-| `/fire_ball`         | Trigger     | rpi_shooter_node     | delivery_server       |
 
 ### 5.3  ROS 2 Actions
 
@@ -190,8 +187,7 @@ All coordination flows through two JSON-encoded String topics:
 │                                                                          │
 │  ┌── Layer 4 (Top) ──────────────────────────────────────────────────┐  │
 │  │  RPi Camera V2 ──CSI──► RPi 4B ──USB──► OpenCR                   │  │
-│  │  Launcher servo ◄──GPIO/PWM── RPi 4B                             │  │
-│  │  Carousel motor ◄──GPIO── RPi 4B                                 │  │
+│  │  MG90 servo ◄──GPIO 12 / PWM── RPi 4B                            │  │
 │  └───────────────────────────────────────────────────────────────────┘  │
 │                                                                          │
 │  ┌── Layer 3 ────────────────────────────────────────────────────────┐  │
@@ -205,7 +201,7 @@ All coordination flows through two JSON-encoded String topics:
 │  └───────────────────────────────────────────────────────────────────┘  │
 │                                                                          │
 │  ┌── Layer 1 (Base) ─────────────────────────────────────────────────┐  │
-│  │  LiPo battery 12 V ──► Buck converter 5 V ──► RPi                │  │
+│  │  LiPo battery 11.1 V ──► Buck converter 5 V ──► RPi                │  │
 │  │  Dynamixel motors, caster wheel                                   │  │
 │  └───────────────────────────────────────────────────────────────────┘  │
 │                                                                          │

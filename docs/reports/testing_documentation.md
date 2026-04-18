@@ -140,7 +140,7 @@ Run: `colcon test` → `colcon test-result --verbose`
 | TST-INT-01 | Exploration publishes frontiers    | Cartographer running, /map available | 1. Launch `auto_explore.launch.py`<br>2. Monitor `frontiers` topic | Frontier JSON published within 5 s     | FR-EXP-02  |
 | TST-INT-02 | AprilTag TF broadcast              | Camera running, tag visible          | 1. Launch `apriltag_detector`<br>2. Hold tag in front of camera<br>3. `ros2 run tf2_ros tf2_echo camera_link tag36h11:0` | Transform printed with age < 0.5 s | FR-DET-02  |
 | TST-INT-03 | toggle_exploration service         | score_and_post running               | 1. `ros2 service call toggle_exploration SetBool "{data: false}"`<br>2. Verify no new goal_pose<br>3. Re-enable with `{data: true}` | Goals pause and resume correctly        | FR-MSN-01  |
-| TST-INT-04 | /fire_ball triggers servo          | rpi_shooter_node running on RPi      | 1. `ros2 service call /fire_ball Trigger`<br>2. Observe servo activation | Servo fires, response.success = true   | FR-DEL-03  |
+| TST-INT-04 | delivery_server fires servo via GPIO | delivery_server running on RPi       | 1. Send START_DELIVERY command<br>2. Observe MG90 servo activation on GPIO 12 | Servo fires, ball launched             | FR-DEL-03  |
 | TST-INT-05 | mission_command → docker           | docker node running                  | 1. Publish `START_DOCKING` JSON on `/mission_command`<br>2. Monitor docker logs | Docker enters STAGING state             | FR-DCK-01  |
 | TST-INT-06 | DDS cross-machine topic flow       | Both machines on same Wi-Fi          | 1. RPi: publish test String on /test_topic<br>2. Laptop: echo /test_topic | Message received within 1 s            | NFR-08     |
 
@@ -162,10 +162,10 @@ the system to be considered mission-ready.
 |------------|---------------------------------------------|----------------------------------------------------|-----------------|
 | TST-SYS-01 | Full maze exploration                      | ≥ 90% occupancy grid coverage within 15 min        | FR-EXP-01–05   |
 | TST-SYS-02 | Tag detection during exploration           | Both station tags detected and TF published         | FR-DET-01–03   |
-| TST-SYS-03 | Docking at Station A                       | Robot stops within 0.10 m, Y error ≤ 0.02 m        | FR-DCK-01–02   |
+| TST-SYS-03 | Docking at Station A                       | Robot stops within 0.10 m, Y error ≤ 0.03 m        | FR-DCK-01–02   |
 | TST-SYS-04 | Static delivery (3 balls)                  | 3 balls fired at Station A                          | FR-DEL-01      |
 | TST-SYS-05 | Docking at Station B                       | Same criteria as TST-SYS-03                         | FR-DCK-01–02   |
-| TST-SYS-06 | Dynamic delivery (target tag)              | ≥ 1 ball fired on dynamic tag detection             | FR-DEL-02      |
+| TST-SYS-06 | Dynamic delivery (target tag)              | 3 balls fired reactively on dynamic tag detection             | FR-DEL-02      |
 | TST-SYS-07 | Mission completion                         | Coordinator reaches MISSION_COMPLETE state          | FR-MSN-03      |
 | TST-SYS-08 | Total time ≤ 25 min                        | Wall-clock time from start to MISSION_COMPLETE      | NFR-01         |
 | TST-SYS-09 | No manual intervention                     | Operator does not touch robot or keyboard post-start| CON-07         |
@@ -184,7 +184,7 @@ References: GitHub Issues #5–#8
 | #5      | Camera flicker causes false tag detections     | Medium   | Mitigated  | amr_perception      | Rapid lighting changes cause frame-level false positives. Mitigated by stale TF threshold (0.5 s). |
 | #6      | Nav2 goal rejection near map boundaries        | Medium   | Mitigated  | docker.py           | Staging waypoints near map edges sometimes rejected. Mitigated by fallback_staging_offset.   |
 | #7      | Time offset drift between RPi and laptop       | Low      | Open       | System-wide         | Manual ~0.40 s offset occasionally drifts. No NTP configured. Stale TF threshold absorbs most drift. |
-| #8      | Carousel indexing unreliable after 3rd ball    | Low      | Open       | amr_launcher (mech) | Spring return occasionally fails to index carousel to 4th position. Not mission-critical (3-ball limit). |
+| #8      | Feed tube indexing unreliable after 6th ball    | Low      | Open       | amr_launcher (mech) | Gravity-fed tube occasionally jams near the last ball. Not mission-critical (7-ball capacity with 6 needed). |
 
 ---
 
