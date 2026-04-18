@@ -24,11 +24,11 @@ ROS 2 Humble workspace for the CDE2310 warehouse delivery mission. The robot aut
 
 ### Mission Overview
 
-The AMR performs a fully autonomous warehouse delivery mission within a 25-minute window. It navigates an unknown maze, locates two delivery stations via AprilTag fiducial markers, and delivers 3 ping-pong balls at each station.
+The AMR performs a fully autonomous warehouse delivery mission within a 25-minute window. It navigates an unknown maze, locates two delivery stations via AprilTag fiducial markers, and delivers ping-pong balls at each station (3 per station, 7 carried total).
 
 ### System Overview
 
-A spring-loaded rack-and-pinion launcher mounted on a TurtleBot3 Waffle Pi. An MG90 continuous-rotation servo compresses and releases a spring, propelling balls through a 42.5 mm barrel with deterministic force (1–2 m/s exit velocity). A 3-ball gravity-fed magazine feeds the barrel.
+A spring-loaded rack-and-pinion launcher mounted on a TurtleBot3 Burger (MeowthBot). An MG90 continuous-rotation servo compresses and releases a spring, propelling balls through a 42.5 mm barrel with deterministic force (1–2 m/s exit velocity). A gravity-fed tube holds 7 balls above the barrel.
 
 ### Mission Flow
 
@@ -46,7 +46,7 @@ EXPLORE ──tag seen──► DOCK ──success──► DELIVER ──done�
 
 ### Operational Scenarios
 
-**Station A (static, tag 0):** Dock → fire → 4 s wait → fire → 6 s wait → fire. Total ~12 s.
+**Station A (static, tag 0):** Dock → fire → 4 s wait → fire → 6 s wait → fire. Total ~14 s.
 
 **Station B (dynamic, tag 2):** Dock → subscribe to `/detections` → fire on tag ID 3 detection → 4 s cooldown → repeat up to 3 shots.
 
@@ -86,7 +86,7 @@ Concept A was selected for its deterministic energy transfer (½kx²), mechanica
 | FR-EXP-04 | Navigate to highest-scored frontier until none remain | ConOps §5.3 |
 | FR-DET-01 | Detect tag36h11 markers using RPi Camera V2 | ConOps §5.4 |
 | FR-DET-02 | Compute 6-DOF pose via solvePnP and publish as TF | ConOps §5.4 |
-| FR-DCK-01 | Navigate to staging point 0.60 m from tag | ConOps §5.5 |
+| FR-DCK-01 | Navigate to staging point 0.40 m from tag | ConOps §5.5 |
 | FR-DCK-02 | Execute discrete geometric visual servoing (intercept → square-up → plunge) to dock within 0.10 m | ConOps §5.5 |
 | FR-DCK-03 | Blacklist tag for 30 s on dock failure | ConOps §5.5 |
 | FR-DEL-01 | Fire 3 balls at static station (4 s, 6 s gaps) | ConOps §5.6 |
@@ -100,11 +100,11 @@ Concept A was selected for its deterministic energy transfer (½kx²), mechanica
 |---|---|---|
 | NFR-01 | Timing | Full mission ≤ 25 minutes |
 | NFR-02 | Timing | Tag detection latency ≤ 100 ms at 10 Hz |
-| NFR-03 | Accuracy | Docking lateral error ≤ 0.02 m |
+| NFR-03 | Accuracy | Docking lateral error ≤ 0.03 m |
 | NFR-04 | Accuracy | Docking yaw error ≤ 0.05 rad (≈ 3°) |
 | NFR-05 | Reliability | Tolerate camera dropout for up to 1.0 s |
 | NFR-06 | Reliability | Handle Nav2 goal rejection with fallback staging offset |
-| NFR-07 | Power | Operate from TurtleBot3 12 V battery for full mission |
+| NFR-07 | Power | Operate from TurtleBot3 11.1 V LiPo battery for full mission |
 | NFR-08 | Comms | FastDDS unicast (no multicast) between RPi and laptop |
 
 ### Constraints
@@ -112,8 +112,8 @@ Concept A was selected for its deterministic energy transfer (½kx²), mechanica
 | ID | Constraint |
 |---|---|
 | CON-01 | 25-minute mission window |
-| CON-02 | Platform: TurtleBot3 Waffle Pi, no base modification |
-| CON-03 | Payload: exactly 3 ping-pong balls |
+| CON-02 | Platform: TurtleBot3 Burger (MeowthBot), no base modification |
+| CON-03 | Payload: 7 ping-pong balls (3 per station + 1 spare) |
 | CON-04 | Software: ROS 2 Humble on Ubuntu 22.04 |
 | CON-05 | No manual intervention after mission start |
 
@@ -135,13 +135,13 @@ Two-machine distributed ROS 2 system. Compute-heavy navigation and planning run 
 │  │         │                         │  │  (OpenCR, LDS-02)           │  │
 │  │         ▼                         │  │                             │  │
 │  │  Nav2 (planner, controller)       │  │  apriltag_detector          │  │
-│  │         │                         │  │  /camera → TF, /marker      │  │
+│  │         │                         │  │  /camera → TF, /detections  │  │
 │  │         ▼                         │  │                             │  │
 │  │  auto_explore_v2                  │  │  delivery_server            │  │
-│  │  (frontiers → goals)              │  │  (shot orchestration)       │  │
+│  │  (frontiers → goals)              │  │  (GPIO servo + shot logic)  │  │
 │  │         │                         │  │                             │  │
-│  │         ▼                         │  │  rpi_shooter_node           │  │
-│  │  mission_coordinator (FSM)        │  │  (GPIO/servo PWM)           │  │
+│  │         ▼                         │  │                             │  │
+│  │  mission_coordinator (FSM)        │  │                             │  │
 │  │                                   │  │                             │  │
 │  │  docking_server                   │  │                             │  │
 │  │  search_stations                  │  │                             │  │
@@ -164,7 +164,7 @@ Two-machine distributed ROS 2 system. Compute-heavy navigation and planning run 
  find_frontiers       mission_coordinator (TF poll)
       │                     │
       ▼                     ▼
- score_and_post       docking_server → delivery_server → rpi_shooter_node → Ball
+ score_and_post       docking_server → delivery_server (GPIO) → Ball
       │
       ▼
  Nav2 → /cmd_vel → OpenCR
@@ -181,18 +181,18 @@ Two-machine distributed ROS 2 system. Compute-heavy navigation and planning run 
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│                     TurtleBot3 Waffle Pi                      │
+│                  TurtleBot3 Burger (MeowthBot)                │
 │                                                               │
 │  Layer 4 (top): RPi Camera V2 → RPi 4B → OpenCR             │
-│                 Launcher servo ← GPIO/PWM ← RPi 4B          │
+│                 Launcher servo ← GPIO 12 PWM ← RPi 4B       │
 │                                                               │
 │  Layer 3: Launcher assembly (spring plunger, barrel, gear)   │
 │           3D-printed launcher mount v2                         │
 │                                                               │
-│  Layer 2: OpenCR → Dynamixel XL430 (L/R wheels)             │
+│  Layer 2: OpenCR → Dynamixel XL430-W210 (L/R wheels)        │
 │           LDS-02 LiDAR (360° @ 5 Hz)                         │
 │                                                               │
-│  Layer 1: LiPo 12V → Buck 5V → RPi                          │
+│  Layer 1: LiPo 11.1V → Buck 5V → RPi                        │
 └──────────────────────────────────────────────────────────────┘
          ◄── Wi-Fi ──►  Laptop (Nav2, SLAM, Coordinator)
 ```
@@ -243,20 +243,24 @@ Subscribes to `/camera/image_raw`, runs `apriltag.Detector(families='tag36h11')`
 Three-phase discrete geometric visual servoing:
 
 ```
-Nav2 staging (0.60 m) → INTERCEPT (reduce Y error to ≤ 0.02 m)
+Nav2 staging (0.40 m) → INTERCEPT (reduce Y error to ≤ 0.03 m)
                        → SQUARE_UP (align yaw to ≤ 0.05 rad)
                        → FINAL_PLUNGE (drive to 0.10 m)
 ```
 
 Robustness: camera dropout coast (1 s), Nav2 rejection retry with −0.15 m offset, backup-and-retry on excessive Y error, 180 s hard timeout.
 
-### 4.4 Delivery
+### 4.4 Delivery — `delivery_server_consolidated.py`
 
-**Owner:** Clara (launcher/shooter nodes), Jeon (delivery_server)
+**Owner:** Clara (hardware), Jeon (delivery logic)
 
-`delivery_server`: Orchestrates static delivery (timed 3-shot sequence) and dynamic delivery (reactive firing on tag ID 3 detection with 4 s cooldown).
+Consolidated node running on RPi that handles both shot orchestration and GPIO servo control directly. No separate shooter node.
 
-`rpi_shooter_node`: Provides `/fire_ball` service on RPi. Activates MG90 servo via GPIO 12 (50 Hz PWM, duty 10.0 CCW) for one fire cycle (0.87 s).
+**Static delivery** (Station A, tag 0): Fires 3 balls at timed intervals (4 s, 6 s gaps between shots). Blocking sequence — sends `DELIVERY_COMPLETE` when done.
+
+**Dynamic delivery** (Station B, tag 2): Subscribes to `/detections`, fires reactively when tag ID 3 center pixel is within ±50 px of crosshair (x = 320). 4 s cooldown between shots. Up to 3 shots max.
+
+**Hardware:** MG90 servo via GPIO 12 (BCM), 50 Hz PWM, duty 10.0 CCW. Fire cycle: fire → reset → preload (~0.87 s per phase).
 
 ### 4.5 Mission Coordination — `mission_coordinator_v3`
 
@@ -301,7 +305,7 @@ When exploration is complete but tags remain, navigates to pre-computed zones, p
 | Service | Type | Server | Client |
 |---|---|---|---|
 | `toggle_exploration` | SetBool | score_and_post | mission_coordinator |
-| `/fire_ball` | Trigger | rpi_shooter_node | delivery_server |
+| `clear_blacklist` | Empty | score_and_post | mission_coordinator |
 
 ### ROS 2 Actions
 
@@ -321,7 +325,7 @@ Status:  {"sender": "docker", "status": "DOCKING_COMPLETE", "data": "tag36h11:0"
 |---|---|---|
 | `START_DOCKING` | docker | `DOCKING_COMPLETE` / `DOCKING_FAILED` |
 | `START_UNDOCKING` | docker | `UNDOCKING_COMPLETE` |
-| `START_DELIVERY` | delivery_server | `DELIVERY_COMPLETE` |
+| `START_DELIVERY` | delivery_server | `BALL_FIRED` (per shot), `DELIVERY_COMPLETE` |
 | `START_SEARCH` | search_stations | (tag interrupt or `SEARCH_FAILED`) |
 
 ### TF Tree
@@ -337,8 +341,7 @@ map → odom → base_footprint → base_link → base_scan (LiDAR)
 
 | Interface | Pin/Protocol | Connected To |
 |---|---|---|
-| GPIO 18 (PWM) | 50 Hz PWM | Launcher servo |
-| GPIO 23 | Digital out | Carousel motor |
+| GPIO 12 (PWM) | 50 Hz PWM | Launcher servo (MG90) |
 | USB serial | 115200 baud | RPi ↔ OpenCR |
 | CSI (MIPI) | Camera V2 | RPi CSI port |
 
@@ -375,7 +378,7 @@ Group7_AMR/
 │   │   ├── config/                #   nav2_params.yaml
 │   │   └── launch/                #   auto_explore.launch.py
 │   └── CDE2310_AMR_Trial_Run/     # Mission coordination
-│       ├── CDE2310_AMR_Trial_Run/ #   coordinator, docker, delivery, search, shooter
+│       ├── CDE2310_AMR_Trial_Run/ #   coordinator, docker, delivery_server_consolidated, search
 │       ├── config/                #   slam_params.yaml, minimal_nav2.yaml
 │       └── launch/                #   mission, full_mission, minimal_nav2, gazebo
 ├── hardware/
@@ -431,18 +434,17 @@ source /opt/ros/humble/setup.bash
 cd ~/Group7_AMR && colcon build && source install/setup.bash
 
 # Gazebo simulation
-export TURTLEBOT3_MODEL=waffle_pi
+export TURTLEBOT3_MODEL=burger
 ros2 launch CDE2310_AMR_Trial_Run gazebo_mission.launch.py
 
-# Real robot (single command)
-ros2 launch CDE2310_AMR_Trial_Run full_mission.launch.py
+# Real robot
+# RPi:    ros2 launch /home/ubuntu/turtlebot3_ws/src/rpi_all.launch.py
+# Laptop: ros2 launch CDE2310_AMR_Trial_Run full_mission.launch.py
 
-# Or launch individually:
-# T1: ros2 launch turtlebot3_bringup robot.launch.py
-# T2: ros2 launch CDE2310_AMR_Trial_Run minimal_nav2.launch.py use_sim_time:=false
-# T3: ros2 launch auto_explore_v2 auto_explore.launch.py use_sim_time:=false
-# T4: ros2 launch CDE2310_AMR_Trial_Run mission.launch.py use_sim_time:=false
-# T5: ros2 run CDE2310_AMR_Trial_Run rpi_shooter_node  (on RPi)
+# Or launch individually (laptop side):
+# T1: ros2 launch CDE2310_AMR_Trial_Run minimal_nav2.launch.py use_sim_time:=false
+# T2: ros2 launch auto_explore_v2 auto_explore.launch.py use_sim_time:=false
+# T3: ros2 launch CDE2310_AMR_Trial_Run mission.launch.py use_sim_time:=false
 ```
 
 ### Dependencies
@@ -480,7 +482,7 @@ colcon test-result --verbose
 | TST-INT-01 | Exploration publishes frontiers | FR-EXP-02 |
 | TST-INT-02 | AprilTag TF broadcast | FR-DET-02 |
 | TST-INT-03 | toggle_exploration service | FR-MSN-01 |
-| TST-INT-04 | /fire_ball triggers servo | FR-DEL-03 |
+| TST-INT-04 | delivery_server fires servo via GPIO | FR-DEL-01 |
 | TST-INT-05 | mission_command → docker | FR-DCK-01 |
 | TST-INT-06 | DDS cross-machine topic flow | NFR-08 |
 
@@ -490,10 +492,10 @@ colcon test-result --verbose
 |---|---|---|
 | TST-SYS-01 | Full maze exploration | ≥ 90% coverage within 15 min |
 | TST-SYS-02 | Tag detection | Both station tags detected |
-| TST-SYS-03 | Docking (Station A) | Within 0.10 m, Y error ≤ 0.02 m |
+| TST-SYS-03 | Docking (Station A) | Within 0.10 m, Y error ≤ 0.03 m |
 | TST-SYS-04 | Static delivery | 3 balls fired |
 | TST-SYS-05 | Docking (Station B) | Same as TST-SYS-03 |
-| TST-SYS-06 | Dynamic delivery | ≥ 1 ball on tag detection |
+| TST-SYS-06 | Dynamic delivery | 3 balls fired reactively on tag ID 3 detection |
 | TST-SYS-07 | Mission completion | Coordinator reaches MISSION_COMPLETE |
 | TST-SYS-08 | Total time | ≤ 25 min |
 | TST-SYS-09 | No manual intervention | Fully autonomous |
@@ -515,7 +517,7 @@ colcon test-result --verbose
 | #5 | Camera flicker causes false tag detections | Medium | Mitigated (stale TF threshold) |
 | #6 | Nav2 goal rejection near map boundaries | Medium | Mitigated (fallback offset) |
 | #7 | Time offset drift between RPi and laptop | Low | Open |
-| #8 | Carousel indexing unreliable after 3rd ball | Low | Open (not mission-critical) |
+| #8 | Feed tube reliability degrades after 5th ball | Low | Open (not mission-critical) |
 
 ---
 
@@ -525,23 +527,26 @@ colcon test-result --verbose
 
 | Spec | Value |
 |---|---|
-| Dimensions | 281 × 306 × ~300 mm (with payload) |
-| Platform | TurtleBot3 Waffle Pi |
-| Power | LB-012, 11.1 V 1800 mAh LiPo (~80 min normal) |
+| Dimensions | 235 × 230 × 24.5 mm (base); ~300 mm total with payload |
+| Weight | 1300 g (base), 1319 g (with payload) |
+| Platform | TurtleBot3 Burger (MeowthBot) |
+| Power | LB-012, 11.1 V 1800 mAh LiPo |
+| Drive | Differential drive, 2× Dynamixel XL430-W210 |
 | LiDAR | LDS-02, 360°, 0.12–3.5 m |
 | Camera | RPi Camera Module V2 (CSI) |
-| Launcher | MG90 servo, rack-and-pinion, GPIO 12, 50 Hz PWM |
-| Ball capacity | 3 × 40 mm ping-pong balls |
-| Launch cycle | 0.87 s per ball |
+| Launcher | MG90 servo, rack-and-pinion, GPIO 12 (BCM), 50 Hz PWM |
+| Ball capacity | 7 × 40 mm ping-pong balls |
+| Launch cycle | 0.87 s per phase (fire/reset/preload) |
 
 ### Quick Start
 
-1. Load 3 balls into magazine
+1. Load 7 balls into the feed tube
 2. Power on OpenCR, wait ~30 s for RPi boot
 3. SSH into RPi: `ssh ubuntu@<ROBOT_IP>`
-4. Launch: `ros2 launch CDE2310_AMR_Trial_Run full_mission.launch.py`
-5. Robot explores, detects, docks, delivers autonomously
-6. Shutdown: `Ctrl+C` all sessions, switch off OpenCR
+4. RPi: `ros2 launch /home/ubuntu/turtlebot3_ws/src/rpi_all.launch.py`
+5. Laptop: `ros2 launch CDE2310_AMR_Trial_Run full_mission.launch.py`
+6. Robot explores, detects, docks, delivers autonomously
+7. Shutdown: `Ctrl+C` all sessions, switch off OpenCR
 
 ### Troubleshooting
 
