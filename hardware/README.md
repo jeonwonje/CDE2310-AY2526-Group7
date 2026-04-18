@@ -1,21 +1,12 @@
 # Hardware <!-- omit in toc -->
 
-
-CAD files and mechanical documentation for the AMR.
-
-- `launcher/` — SolidWorks CAD for the spring-loaded launcher assembly
-- `chassis/` — TurtleBot3 mounting plates and chassis modifications
-
-
-
-# Table of contents <!-- omit in toc -->
+## Table of contents <!-- omit in toc -->
 - [Overview](#overview)
-- [System Description](#system-description)
-- [Design Objectives](#design-objectives)
-- [CAD File Structure](#cad-file-structure)
+  - [System Description](#system-description)
+  - [Design Objectives](#design-objectives)
 - [Initial concept development](#initial-concept-development)
-  - [Concept 1: rack and half pinion](#concept-1-rack-and-half-pinion)
-- [Changelog](#changelog)
+  - [Rack and half pinion](#rack-and-half-pinion)
+- [Design iterations](#design-iterations)
   - [Version 1.0.0 - first design](#version-100---first-design)
   - [Version 2.0.0 - servo integrated into launcher](#version-200---servo-integrated-into-launcher)
   - [Version 2.1.0 - bearing supports for rack and pinion](#version-210---bearing-supports-for-rack-and-pinion)
@@ -25,27 +16,17 @@ CAD files and mechanical documentation for the AMR.
   - [Rubber band vs Spring](#rubber-band-vs-spring)
   - [Clutch bearing reset](#clutch-bearing-reset)
   - [Rack and pinion engagement](#rack-and-pinion-engagement)
+- [Materials and Components](#materials-and-components)
+- [Limitations and application specific modifications](#limitations-and-application-specific-modifications)
+  - [Launcher System](#launcher-system)
 
-
-
-# Payload and Mounting System for Maze Navigation Robot <!-- omit in toc -->
 
 ## Overview
 
 This repository contains the CAD models for the payload
 and mounting systems used in the AMR.
 
-The system supports:
-- Raspberry Pi Camera module 2
-- Launcher subsystem
-- Ball feeder
-- Structural mounting to chassis
-
-The design focuses on simplicity, repeatability and keeping the robot as slim as possible.
-
----
-
-## System Description
+### System Description
 
 The payload system consists of:
 
@@ -57,7 +38,7 @@ The payload system consists of:
 
 ---
 
-## Design Objectives
+### Design Objectives
 
 - Maintain robot size as much as possible
 - Ensure unobstructed LiDAR view
@@ -66,26 +47,67 @@ The payload system consists of:
 - Ensure repeatability of launcher
 
 ---
-
-## CAD File Structure
-
-<!-- TODO -->
-
 ## Initial concept development
 
-### Concept 1: rack and half pinion
+### Rack and half pinion
 
 ![Alt text](./docs/intial_design_concept.jpg)
 
-How it works:
-- The pinion was to be powered by a continuous servo motor
-- At the start, the teeth on the pinion catches on to the rack pulling the plunger back, allowing the ball to fall in position
-- At the end of the pinion, the rack is released, launching the ball
-- The plunger now in a foward position prevents the next ball from being loaded immediately
+Concept Description
 
-Pros: <!--TODO -->
+The proposed concept used a rack and half-pinion mechanism powered by a continuous rotation servo motor.
 
-## Changelog
+At the beginning of each cycle:
+
+- The pinion rotates and engages the rack.
+- The rack is pulled backward, retracting the plunger.
+- As the plunger retracts, a ball falls into the loading position.
+
+Once the pinion reaches the end of its rotation:
+
+- The rack is released.
+- Stored elastic energy in the rubber band drives the plunger forward.
+- The ball is launched.
+
+After launch:
+
+- The plunger returns to its forward position.
+- This forward position temporarily blocks the next ball from loading prematurely.
+- This allows controlled loading of one ball per cycle.
+
+This mechanism enabled both loading and launching to be performed using a single rotational motion.
+
+Rationale for Choosing This Concept:
+
+- This concept was selected due to its ability to combine multiple functions into a single mechanism.
+
+Key advantages included:
+
+- Single actuator operation
+- Only one servo motor was required to both retract and release the plunger, reducing system complexity.
+- Compact design
+- The rack and pinion arrangement allowed the launcher to be positioned within a limited space.
+- Low power requirements
+- The use of elastic energy storage reduced the need for continuous motor torque during launching.
+- Simple mechanical layout
+- Fewer moving components reduced potential points of failure.
+
+This made the design suitable for integration into the constrained mechanical layout of the robot.
+
+Identified Limitations of Initial Concept:
+
+Despite its advantages, several limitations were identified during early evaluation.
+
+- Limited launch range
+- The amount of stored elastic energy was restricted by the available rack travel distance.
+- Potential alignment sensitivity
+- Rack and pinion mechanisms require accurate alignment to prevent slipping or uneven wear.
+- Dependence on consistent pinion engagement
+- Incorrect starting positions could lead to failed engagement or inconsistent loading.
+
+These limitations informed the design changes introduced in later iterations.
+
+## Design iterations
 ### Version 1.0.0 - first design
 ![Alt text](./docs/launcher_v1.0.0_view_2.jpg)
 ![Alt text](./docs/launcher_v1.0.0_view_1.jpg)
@@ -102,6 +124,7 @@ This slowed down development because launcher testing depended on Turtlebot avai
 ![Alt text](./docs/launcher_v2.0.0_view_1.jpg)
 ![Alt text](./docs/launcher_v2.0.0_view_2.jpg)
 ![Alt text](./docs/launcher_v2.0.0_view_3.jpg)
+![Alt text](./docs/launcher_v2.0.0_positionig.jpg)
 
 Changes from Previous Version:
 
@@ -142,6 +165,7 @@ Possible root causes:
 
 ### Version 2.2.0 - clutch bearing reset
 ![Alt text](./docs/launcher_v2.2.0_view_1.jpg)
+![Alt text](./docs/launcher_v2.2.0_irl_view_1.jpg)
 
 Changes from Previous Version:
 
@@ -171,6 +195,7 @@ Result After Fix:
 
 ### Rubber band vs Spring
 ![Alt text](./docs/rubberband_vs_spring.jpg)
+
 Rubber band can be already be streched when the plunger is in the fowardmost position allowing us to store more energy while keeping within the stall torque.
 
 ### Clutch bearing reset
@@ -226,3 +251,97 @@ This ensures that:
 
 - The pinion always returns to the same angular position.
 ### Rack and pinion engagement
+![Alt text](./docs/rack_pinion_engagement.jpg)
+Problem: Inconsistent Rack–Pinion Engagement
+
+The initial forward position of the rack caused inconsistent engagement with the pinion gear.
+
+Due to the rack starting position:
+
+- The pinion did not consistently engage the same tooth on the rack.
+- Depending on the angular position of the pinion, engagement occurred randomly between adjacent teeth.
+
+![Alt text](./docs/rack_pinion_stuck.jpg)
+![Alt text](./docs/rack_pinion_stuck_irl.jpg)
+
+As a result:
+
+- There were instances where the plunger got stuck and did not fire.
+
+Fix Implemented: Rack Position Adjustment Using Washers
+
+- To correct the engagement alignment, washers were added between the rack and the plunger face.
+
+This modification:
+
+Shifted the rack slightly backward relative to the pinion.
+Adjusted the rack starting position to align properly with the pinion teeth.
+Ensured that the pinion consistently engaged the same rack tooth during each cycle.
+
+The number of washers was incrementally adjusted until consistent engagement was achieved.
+
+## Materials and Components
+
+The launcher system consisted of both custom-manufactured and purchased components.
+
+Custom-Manufactured Components:
+- Rack
+- Pinion housing
+- Plunger body
+- Ball feeder holders
+- Launcher tube
+
+These components were manufactured using 3D printing with the following settings:
+- layer height
+- infill density
+- etc
+
+
+Purchased Components:
+- Ball bearings
+- Clutch bearing
+- Continuous servo motor
+- Aluminium wire (ball feeder)
+
+## Limitations and application specific modifications
+
+### Launcher System
+Limitation 1 — Wear of Self-Forming Threads
+
+- The threads used to connect the rack to the plunger face are self-forming threads.
+
+Explanation:
+- This connection experiences repeated loading and unloading during each launch cycle. As a result, the self-forming threads are subjected to cyclic fatigue and may gradually wear or loosen over time.
+
+Impact:
+- Thread wear may lead to reduced structural integrity and eventual loosening of the rack–plunger connection, reducing system reliability.
+
+Recommended Modification:
+- Replace the self-forming threads with heat-set threaded inserts to improve durability and maintain thread strength over repeated cycles.
+
+Limitation 2 — Open Launcher Tube
+
+- The launcher tube was designed to be fully open to allow visual observation during development and debugging.
+
+Explanation:
+- While this design simplified troubleshooting, it left the internal components exposed to external debris.
+
+Impact:
+- Foreign objects entering the launcher tube were observed to interfere with plunger motion, occasionally affecting launcher performance.
+
+Recommended Modification:
+- For deployment in real environments, the launcher tube should be redesigned as a fully enclosed structure to prevent debris ingress and improve reliability.
+
+Ball Feeder System
+Limitation 3 — Deformation of Aluminium Wire Feeder
+
+- The ball feeder is currently constructed using aluminium wire supported by 3D-printed holders.
+
+Explanation:
+- Aluminium wire is relatively malleable and can deform under repeated loading or accidental contact.
+
+Impact:
+- Any deformation alters the alignment of the feeder path, which reduces the consistency of ball feeding and increases the likelihood of jams.
+
+Recommended Modification:
+- Replace the aluminium wire feeder with a fully 3D-printed feeder structure designed with higher rigidity and consistent geometry.
