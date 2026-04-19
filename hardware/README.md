@@ -298,9 +298,10 @@ These components were manufactured using 3D printing with the following settings
 
 
 Purchased Components:
-- Ball bearings
-- Clutch bearing
-- Continuous servo motor
+- Ball bearings (625-ZZ)
+- Clutch bearing (INA HF 1012)
+- Inner ring (IKO LRT 61010)
+- Continuous servo motor (modded MG90s)
 - Aluminium wire (ball feeder)
 
 ## Limitations and application specific modifications
