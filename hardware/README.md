@@ -291,11 +291,7 @@ Custom-Manufactured Components:
 - Ball feeder holders
 - Launcher tube
 
-These components were manufactured using 3D printing with the following settings:
-- layer height
-- infill density
-- etc
-
+Manufacturing details can be found in [MANUFACTURING.md](../docs/MANUFACTURING.md)
 
 Purchased Components:
 - Ball bearings (625-ZZ)
