@@ -100,6 +100,17 @@ Group7_AMR/
 │   │   │   └── test_pep257.py
 │   │   ├── setup.py
 │   │   └── package.xml
+│   │
+│   └── apriltag_docking/          # C++ perception pipeline on RPi
+│       ├── src/
+│       │   └── detected_dock_pose_publisher.cpp
+│       ├── include/
+│       ├── launch/
+│       │   └── apriltag_dock_pose_publisher.launch.py
+│       ├── config/
+│       │   └── apriltags_36h11.yaml
+│       ├── CMakeLists.txt
+│       └── package.xml
 │
 ├── hardware/
 │   ├── chassis/                   # TurtleBot3 assembly + mounts
@@ -193,7 +204,7 @@ documentation, and review. All AI-assisted contributions are disclosed:
 
 | Disclosure Method           | Detail                                              |
 |-----------------------------|-----------------------------------------------------|
-| Commit trailer              | `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>` |
+| Commit trailer              | `Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>` |
 | Commit trailer              | `ai-assisted: yes`                                  |
 | CHANGELOG                   | AI-assisted entries noted where applicable           |
 | Code comments               | Not required for AI-generated code (commits suffice)|
@@ -224,27 +235,40 @@ All changes are recorded in `CHANGELOG.md` at the repository root, following
 
 ## 7  Dependencies
 
-### 7.1  ROS 2 Package Dependencies
+### 7.1  Team-Authored ROS 2 Packages
 
-| Dependency                   | Version       | Purpose                            |
-|------------------------------|---------------|-------------------------------------|
-| `rclpy`                     | Humble        | ROS 2 Python client library         |
-| `std_msgs`                  | Humble        | String, Bool message types          |
-| `std_srvs`                  | Humble        | SetBool, Trigger service types      |
-| `geometry_msgs`             | Humble        | Twist, PoseStamped, Transform       |
-| `nav_msgs`                  | Humble        | OccupancyGrid, Odometry, Path       |
-| `sensor_msgs`               | Humble        | Image, LaserScan, CameraInfo        |
-| `nav2_msgs`                 | Humble        | NavigateToPose, ComputePathToPose   |
-| `tf2_ros`                   | Humble        | TF2 buffer, listener, broadcaster   |
-| `tf2_geometry_msgs`         | Humble        | TF2 message conversions             |
-| `action_msgs`               | Humble        | GoalStatus                          |
-| `apriltag_msgs`             | Humble        | AprilTagDetectionArray              |
-| `apriltag_ros`              | Humble        | Tag36h11 detection + pose (RPi; external package) |
-| `turtlebot3_bringup`        | Humble        | Robot hardware bringup              |
-| `cartographer_ros`          | Humble        | SLAM                                |
-| `nav2_bringup`              | Humble        | Navigation stack launch             |
+| Package                 | Build        | Machine | Purpose                                                    |
+|-------------------------|--------------|---------|------------------------------------------------------------|
+| `auto_explore_v2`       | ament_python | Laptop  | BFS frontier detection + scored Nav2 goal posting          |
+| `CDE2310_AMR_Trial_Run` | ament_python | Laptop + RPi | Mission coordinator, docking, search, delivery server |
+| `apriltag_docking`      | ament_cmake  | RPi     | C++ perception pipeline: camera_ros → image_proc → apriltag_ros → dock-target TF + PoseStamped publishers |
 
-### 7.2  Python Dependencies
+### 7.2  Upstream ROS 2 Dependencies
+
+| Dependency                   | Version       | Consumed By              | Purpose                            |
+|------------------------------|---------------|--------------------------|-------------------------------------|
+| `rclpy`                     | Humble        | auto_explore_v2, CDE2310_AMR_Trial_Run | ROS 2 Python client library |
+| `rclcpp`                    | Humble        | apriltag_docking          | ROS 2 C++ client library            |
+| `std_msgs`                  | Humble        | auto_explore_v2, CDE2310_AMR_Trial_Run | String, Bool message types |
+| `std_srvs`                  | Humble        | auto_explore_v2, CDE2310_AMR_Trial_Run | SetBool, Empty service types |
+| `geometry_msgs`             | Humble        | all three                 | Twist, PoseStamped, Transform       |
+| `nav_msgs`                  | Humble        | auto_explore_v2, CDE2310_AMR_Trial_Run | OccupancyGrid, Odometry, Path |
+| `sensor_msgs`               | Humble        | apriltag_docking          | Image, CameraInfo                   |
+| `nav2_msgs`                 | Humble        | auto_explore_v2, CDE2310_AMR_Trial_Run | NavigateToPose, ComputePathToPose |
+| `nav2_simple_commander`     | Humble        | apriltag_docking          | Nav2 helper API                     |
+| `tf2_ros`                   | Humble        | CDE2310_AMR_Trial_Run, apriltag_docking | TF2 buffer, listener, broadcaster |
+| `tf2_geometry_msgs`         | Humble        | CDE2310_AMR_Trial_Run     | TF2 message conversions             |
+| `action_msgs`               | Humble        | CDE2310_AMR_Trial_Run     | GoalStatus                          |
+| `apriltag_ros`              | Humble        | apriltag_docking (upstream) | Tag36h11 detection + pose (composable node) |
+| `apriltag_msgs`             | Humble        | apriltag_docking, CDE2310_AMR_Trial_Run | AprilTagDetectionArray    |
+| `image_proc`                | Humble        | apriltag_docking          | Composable Resize + Rectify nodes   |
+| `image_view`                | Humble        | apriltag_docking          | Image debug utilities               |
+| `camera_ros`                | Humble        | apriltag_docking (launch) | RPi CSI camera driver               |
+| `turtlebot3_bringup`        | Humble        | RPi bringup               | Robot hardware bringup              |
+| `cartographer_ros`          | Humble        | full_mission launch       | SLAM                                |
+| `nav2_bringup`              | Humble        | full_mission launch       | Navigation stack launch             |
+
+### 7.3  Python Dependencies
 
 | Package     | Version   | Purpose                             |
 |-------------|-----------|--------------------------------------|
@@ -252,7 +276,11 @@ All changes are recorded in `CHANGELOG.md` at the repository root, following
 | `RPi.GPIO`  | ≥ 0.7 (RPi-only) | GPIO PWM for MG90 servo in `delivery_server` |
 | `pytest`    | ≥ 7.0     | Testing framework (lint/style suites)|
 
-### 7.3  System Dependencies
+Note: AprilTag detection is performed by the C++ `apriltag_ros` composable
+node wrapped inside `apriltag_docking`; there is no Python `apriltag`
+dependency in the mission code.
+
+### 7.4  System Dependencies
 
 | Package             | Purpose                                      |
 |---------------------|----------------------------------------------|
@@ -286,13 +314,14 @@ colcon test --packages-select auto_explore_v2  # runs flake8 + pep257
 
 ## 9  Launch Files
 
-| Launch File                      | Package               | Description                              |
-|----------------------------------|-----------------------|------------------------------------------|
-| `auto_explore.launch.py`        | auto_explore_v2       | Cartographer + Nav2 + frontier exploration|
-| `mission.launch.py`             | CDE2310_AMR_Trial_Run | Coordinator + docking + delivery + search|
-| `full_mission.launch.py`        | CDE2310_AMR_Trial_Run | Everything: SLAM + Nav2 + mission nodes  |
-| `minimal_nav2.launch.py`        | CDE2310_AMR_Trial_Run | Minimal Nav2 for testing                 |
-| `gazebo_mission.launch.py`      | CDE2310_AMR_Trial_Run | Gazebo simulation with full mission      |
+| Launch File                             | Package               | Description                              |
+|-----------------------------------------|-----------------------|------------------------------------------|
+| `auto_explore.launch.py`               | auto_explore_v2       | Cartographer + Nav2 + frontier exploration|
+| `mission.launch.py`                    | CDE2310_AMR_Trial_Run | Coordinator + docking + delivery + search|
+| `full_mission.launch.py`               | CDE2310_AMR_Trial_Run | Everything: SLAM + Nav2 + mission nodes  |
+| `minimal_nav2.launch.py`               | CDE2310_AMR_Trial_Run | Minimal Nav2 for testing                 |
+| `gazebo_mission.launch.py`             | CDE2310_AMR_Trial_Run | Gazebo simulation with full mission      |
+| `apriltag_dock_pose_publisher.launch.py` | apriltag_docking    | RPi: camera_ros + image_proc + apriltag_ros composable pipeline + dock-target TFs |
 
 ---
 
