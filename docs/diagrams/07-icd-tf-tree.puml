@@ -1,0 +1,51 @@
+@startuml 07-icd-tf-tree
+!include _style.iuml
+
+title <b>TF Tree</b>\n<size:18><color:#5D6D7E>map → odom → base_link chain + per-station dock targets</color></size>
+
+skinparam ranksep 22
+skinparam nodesep 30
+
+state "map"              as map
+state "odom"             as odom
+state "base_footprint"   as base_fp
+state "base_link"        as base
+
+state "base_scan\n<size:14>LDS-02 LiDAR</size>"    as scan
+state "caster_back_link"                           as caster
+state "imu_link"                                   as imu
+state "wheel_left_link"                            as wl
+state "wheel_right_link"                           as wr
+state "camera_link"                                as camlink
+state "camera\n<size:14>optical frame</size>"      as cam
+state "tag36h11:0"                                 as tag0
+state "tag36h11:2"                                 as tag2
+state "nav2_dock_target_0"                         as ndt0 <<coord>>
+state "nav2_dock_target_2"                         as ndt2 <<coord>>
+
+map      --> odom    : <size:14>dynamic · ~9.6 Hz</size>\n<size:14>(Cartographer)</size>
+odom     --> base_fp : <size:14>dynamic · ~20 Hz</size>\n<size:14>(odom)</size>
+base_fp  --> base    : <size:14>static</size>
+
+base --> scan    : <size:14>static</size>
+base --> caster  : <size:14>static</size>
+base --> imu     : <size:14>static</size>
+base --> wl      : <size:14>dynamic · ~13 Hz</size>
+base --> wr      : <size:14>dynamic · ~13 Hz</size>
+base --> camlink : <size:14>static</size>\n<size:14>(tf2 static broadcaster)</size>
+
+camlink --> cam  : <size:14>static</size>\n<size:14>(optical rotation)</size>
+
+cam --> tag0 : <size:14>dynamic · 10 Hz</size>\n<size:14>(apriltag_ros)</size>
+cam --> tag2 : <size:14>dynamic · 10 Hz</size>\n<size:14>(apriltag_ros)</size>
+
+tag0 --> ndt0 : <size:14>static</size>\n<size:14>dock_target_broadcaster_0</size>
+tag2 --> ndt2 : <size:14>static</size>\n<size:14>dock_target_broadcaster_2</size>
+
+note right of tag0
+  <b>tag36h11:3</b> is inspected via
+  <i>/detections</i> only — not broadcast
+  as a TF frame.
+end note
+
+@enduml

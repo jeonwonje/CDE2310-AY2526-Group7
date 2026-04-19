@@ -1,0 +1,52 @@
+@startuml 03-hld-hardware-software-mapping
+!include _style.iuml
+
+title <b>Hardware–Software Mapping</b>\n<size:18><color:#5D6D7E>TurtleBot3 Burger (MeowthBot) layer stack</color></size>
+
+skinparam ranksep 25
+skinparam nodesep 30
+
+' Stack order (bottom → top): L1 → L2 → L3 → L4
+node "Layer 1 — Power + chassis" as L1 {
+  component "LiPo 11.1 V · 3S battery"                  as LiPo    <<io>>
+  component "OpenCR 5 V regulator"                      as Reg5V
+  component "Caster wheel (passive)"                    as Caster
+  LiPo -right-> Reg5V : <size:14>11.1 V</size>
+}
+
+node "Layer 2 — Locomotion + scanning" as L2 {
+  component "OpenCR board\nturtlebot3_bringup"          as OpenCR
+  component "Dynamixel XL430-W210\nL / R drive wheels"  as Dyna  <<io>>
+  component "LDS-02 LiDAR · 360° @ 5 Hz"                as Lidar <<io>>
+  Lidar  -right-> OpenCR : <size:14>UART</size>
+  OpenCR -right-> Dyna   : <size:14>TTL bus</size>
+}
+
+node "Layer 3 — Launcher assembly (mechanical)" as L3 {
+  component "3D-printed launcher\nspring plunger · barrel · spur gear" as Launcher <<io>>
+}
+
+node "Layer 4 — Perception + launcher control" as L4 {
+  component "<$raspberrypi>  Raspberry Pi 4B\nrpi_camera · apriltag_docking · delivery_server" as RPi
+  component "RPi Camera V2 (CSI)"                       as CamHW   <<io>>
+  component "MG90 servo · GPIO 12 · PWM"                as ServoHW <<io>>
+  RPi -right-> CamHW
+  RPi -right-> ServoHW
+}
+
+' Cross-layer stacking (forces bottom-to-top rank order in dot)
+Reg5V  -up-> OpenCR  : <size:14>5 V USB to RPi via L4</size>
+OpenCR -up-> Launcher : <size:14>chassis mounts launcher</size>
+Launcher -up-> RPi    : <size:14>servo push rod</size>
+
+' Laptop link
+node "<$linux>  Laptop\nNav2 · Cartographer · Coordinator · RViz2" as Laptop
+L4 -right[#2E86C1,thickness=2]-> Laptop : <b>Wi-Fi</b>\n<size:14>CycloneDDS unicast</size>
+
+note right of L1
+  <b>Power chain:</b>
+  LiPo 11.1 V → OpenCR 5 V regulator → RPi.
+  <b>No external buck converter.</b>
+end note
+
+@enduml

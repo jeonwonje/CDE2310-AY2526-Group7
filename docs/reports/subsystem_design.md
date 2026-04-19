@@ -104,28 +104,9 @@ Addison Sears-Collins' Dec 2024 tutorial (attribution preserved in source).
 
 **Pipeline (single composable container `apriltag_vision_container`, intra-process comms):**
 
-```
-  RPi Camera V2 (CSI)
-        │
-        ▼
-  camera_ros::CameraNode         1640×1232 BGR888 @ 10 Hz
-        │  /camera/image_raw + /camera/camera_info
-        ▼
-  image_proc::ResizeNode         nearest-neighbour → 640×480
-        │  /camera/resized/image_raw + /camera/resized/camera_info
-        ▼
-  image_proc::RectifyNode        rectify via calibrated intrinsics
-        │  /camera/resized/image_rect
-        ▼
-  apriltag_ros::AprilTagNode     tag36h11 detect (IDs 0, 2)
-        │
-        ├──► /detections (AprilTagDetectionArray)
-        └──► TF: camera → tag36h11:{id}  (dynamic, per frame)
+![Figure 4 — Perception Pipeline](../diagrams/out/04-ssd-perception-pipeline.png)
 
-  Per station N ∈ {0, 2} (standalone nodes in same launch):
-        static TF: tag36h11:N → nav2_dock_target_N  (x=0.195, z=0.05, pitch=-π/2, roll=π/2)
-        detected_dock_pose_publisher_N → /detected_dock_pose_N (PoseStamped, 10 Hz, frame_id=camera)
-```
+*Figure 4 — `apriltag_docking` zero-copy composable container on the RPi. Source: [`../diagrams/04-ssd-perception-pipeline.puml`](../diagrams/04-ssd-perception-pipeline.puml).*
 
 Standalone TF bridges launched alongside the container:
 - `base_link → camera_link` (static, x=0.09, y=0.05, z=0.097).
@@ -179,41 +160,9 @@ state machine. The input signal is `/detected_dock_pose_{0,2}` (PoseStamped
 in the camera optical frame, published at 10 Hz by `apriltag_docking`); the
 output is `/cmd_vel` twists plus one Nav2 `NavigateToPose` call per dock.
 
-```
-  IDLE
-   │  START_DOCKING received
-   ▼
-  NAV_TO_STAGING       Nav2 goal: staging_distance (0.40 m) in front of tag.
-   │                   On reject: retry once with fallback_staging_offset
-   │                   (0.15 m closer); on second reject → DOCKING_FAILED.
-   ▼
-  COMPUTE_GEOMETRY     Sample current tag pose in base_link; derive
-   │                   intercept point = intercept_ratio (0.7) × current
-   │                   X, and abort boundary = abort_ratio (0.3) × X.
-   ▼
-  INTERCEPT            Drive at a slant toward intercept point to shed
-   │                   lateral (Y) error; stop when Y ≤ intercept_y_tolerance
-   │                   (0.03 m) OR X crosses abort boundary → RETRY_BACKUP.
-   ▼
-  SQUARE_UP            Rotate in place (k_angular=2.0, capped at 0.25 rad/s)
-   │                   until yaw_error ≤ square_yaw_tolerance (0.05 rad).
-   ▼
-  EVALUATE_POSITION    Re-check Y error. If |Y| > max_allowed_y_error (0.4 m)
-   │                   → RETRY_BACKUP. Else proceed.
-   ▼
-  FINAL_PLUNGE         Drive straight at slow_linear_speed (0.03 m/s) until
-   │                   X ≤ stop_distance (0.10 m). Emit DOCKING_COMPLETE.
-   │
-   │                   On START_UNDOCKING from coordinator:
-   ▼
-  UNDOCKING            Reverse at undock_speed (-0.15 m/s) for undock_distance
-                       (0.20 m). Emit UNDOCKING_COMPLETE → IDLE.
+![Figure 5 — Docking FSM](../diagrams/out/05-ssd-docking-fsm.png)
 
-  RETRY_BACKUP         Reverse at backup_speed (-0.1 m/s) for backup_duration
-                       (2.0 s), then → COMPUTE_GEOMETRY. Up to max_retries (3);
-                       exceeding limit or max_docking_time (180 s) →
-                       DOCKING_FAILED.
-```
+*Figure 5 — `docker.py` 8-state geometric visual-servoing FSM. Source: [`../diagrams/05-ssd-docking-fsm.puml`](../diagrams/05-ssd-docking-fsm.puml).*
 
 **Parameters:**
 
@@ -292,25 +241,9 @@ mission lifecycle.
 
 **State Machine:**
 
-```
-  INIT ──► EXPLORING ──tag seen──► DOCKING ──success──► DELIVERING
-               ▲                      │                      │
-               │                      │ fail (blacklist 30 s)│
-               │                      ▼                      ▼
-               └──── resume ◄──── EXPLORING              UNDOCKING
-               │                                             │
-               │                                             │
-               └──── resume ◄────────────────────────────────┘
-               │
-               ▼ (initial_exploration_timeout, 480 s, expires
-               │  while un-serviced tags remain)
-           SEARCHING ──tag seen──► DOCKING ──► ...
-               │
-               ▼ (all target tags serviced)
-           MISSION_COMPLETE
+![Figure 6 — Mission Coordination FSM](../diagrams/out/06-ssd-mission-fsm.png)
 
-  Any state ── master_mission_timeout (1200 s) ──► MISSION_TIMED_OUT
-```
+*Figure 6 — `mission_coordinator_v3` state machine. Source: [`../diagrams/06-ssd-mission-fsm.puml`](../diagrams/06-ssd-mission-fsm.puml).*
 
 **Key Mechanisms:**
 

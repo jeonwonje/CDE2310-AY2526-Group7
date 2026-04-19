@@ -1,68 +1,142 @@
-' Shared skinparams — Group 7 house style (extracted from software_uml_diagram.svg).
-' Include in each diagram with:  !include _style.iuml
-' The Smetana layout engine is set per-diagram because it must appear after @startuml.
+' Group 7 house diagram style (2026-04-19).
+' Locked after comparing 62 rendered samples (see research/ and
+' wiki/plantuml-aesthetics-research.md). Every .puml in docs/diagrams/
+' should start with:
+'     @startuml <name>
+'     !include _style.iuml
+' to inherit this look: thin borders, no shadows, soft palette, Helvetica
+' Neue, role-coded stereotypes, tupadr3 device icons for the laptop/RPi
+' split.
 
-skinparam backgroundColor white
-skinparam defaultFontName Arial
+' --- tupadr3 icon pack, pinned to v3.0.0 (v3+ moved paths; master breaks) ---
+!define ICONURL https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/v3.0.0/icons
+!include ICONURL/common.puml
+!include ICONURL/devicons2/raspberrypi.puml
+!include ICONURL/devicons2/linux.puml
+!include ICONURL/devicons2/ros_original.puml
+
+' --- Canvas + typography ---
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Helvetica Neue"
+skinparam defaultFontSize 18
 skinparam shadowing false
-skinparam roundCorner 20
-skinparam padding 18
+skinparam roundCorner 16
+skinparam padding 12
+skinparam nodesep 55
+skinparam ranksep 50
 
-' Arrows
+' --- Arrows ---
 skinparam arrowColor #2C3E50
-skinparam arrowThickness 3
-skinparam arrowFontSize 24
-skinparam arrowFontColor #34495E
+skinparam arrowThickness 1.8
+skinparam arrowFontSize 14
+skinparam arrowFontColor #5D6D7E
 
-' Activity (activity diagrams)
-skinparam activity {
-  BackgroundColor #AED6F1
-  BorderColor     #2E86C1
-  BorderThickness 3
-  FontSize        28
-  FontStyle       bold
-  DiamondBackgroundColor #D5F5E3
-  DiamondBorderColor     #27AE60
-  DiamondFontSize 26
-  BarColor        #2C3E50
+' --- Components (used by component + deployment diagrams) ---
+skinparam componentStyle rectangle
+skinparam component {
+  BackgroundColor            #EAF4FB
+  BorderColor                #2E86C1
+  BorderThickness            1.6
+  FontColor                  #1B4F72
+  FontStyle                  bold
+
+  ' Role-coded stereotypes
+  BackgroundColor<<coord>>    #E8DAEF
+  BorderColor<<coord>>        #8E44AD
+  FontColor<<coord>>          #4A235A
+
+  BackgroundColor<<delivery>> #FADBD8
+  BorderColor<<delivery>>     #C0392B
+  FontColor<<delivery>>       #78281F
+
+  BackgroundColor<<search>>   #FDEBD0
+  BorderColor<<search>>       #D68910
+  FontColor<<search>>         #7E5109
+
+  BackgroundColor<<io>>       #D5F5E3
+  BorderColor<<io>>           #27AE60
+  FontColor<<io>>             #196F3D
 }
 
-' Notes
+skinparam node {
+  BackgroundColor #F8FAFC
+  BorderColor     #5D6D7E
+  BorderThickness 1.8
+  FontColor       #34495E
+  FontStyle       bold
+  FontSize        22
+}
+
+' --- State machines (FSM diagrams) ---
+skinparam state {
+  BackgroundColor            #EAF4FB
+  BorderColor                #2E86C1
+  BorderThickness            1.8
+  FontColor                  #1B4F72
+  FontStyle                  bold
+  FontSize                   20
+  AttributeFontColor         #5D6D7E
+  AttributeFontSize          15
+
+  BackgroundColor<<coord>>    #E8DAEF
+  BorderColor<<coord>>        #8E44AD
+  FontColor<<coord>>          #4A235A
+
+  BackgroundColor<<delivery>> #FADBD8
+  BorderColor<<delivery>>     #C0392B
+  FontColor<<delivery>>       #78281F
+
+  BackgroundColor<<search>>   #FDEBD0
+  BorderColor<<search>>       #D68910
+  FontColor<<search>>         #7E5109
+
+  BackgroundColor<<fault>>    #F5B7B1
+  BorderColor<<fault>>        #922B21
+  FontColor<<fault>>          #641E16
+
+  BackgroundColor<<terminal>> #F4D03F
+  BorderColor<<terminal>>     #B7950B
+  FontColor<<terminal>>       #7D6608
+}
+
+' --- Activity (legacy mission-flow diagram) ---
+skinparam activity {
+  BackgroundColor            #AED6F1
+  BorderColor                #2E86C1
+  BorderThickness            1.8
+  FontColor                  #1B4F72
+  FontStyle                  bold
+  FontSize                   22
+  DiamondBackgroundColor     #D5F5E3
+  DiamondBorderColor         #27AE60
+  DiamondFontSize            18
+  BarColor                   #2C3E50
+}
+
+' --- Notes ---
 skinparam note {
   BackgroundColor #FDEBD0
   BorderColor     #D68910
-  FontSize        20
+  BorderThickness 1.4
+  FontSize        15
+  FontColor       #7E5109
 }
 
-' Components / nodes (for component diagrams)
-skinparam component {
-  BackgroundColor #AED6F1
-  BorderColor     #2E86C1
-  BorderThickness 2
-  FontSize        14
-  FontStyle       bold
-}
-skinparam node {
-  BackgroundColor #F7F7F7
-  BorderColor     #2C3E50
-  BorderThickness 2
-  FontSize        14
-  FontStyle       bold
-}
-
-' State machines (for state diagrams)
-skinparam state {
-  BackgroundColor #AED6F1
-  BorderColor     #2E86C1
-  BorderThickness 3
-  FontSize        18
-  FontStyle       bold
-  StartColor      #2C3E50
-  EndColor        #C0392B
-}
-
+' --- Title ---
 skinparam title {
-  FontSize        22
-  FontStyle       bold
-  FontColor       #000000
+  FontSize  30
+  FontStyle bold
+  FontColor #1B4F72
 }
+
+' --- Sequence (not used by current 7, but kept in case) ---
+skinparam sequence {
+  ArrowColor          #2C3E50
+  LifeLineBorderColor #5D6D7E
+  ActorBorderColor    #2E86C1
+  ActorBackgroundColor #EAF4FB
+}
+
+' hide empty state descriptions so FSM boxes stay tight
+hide empty description
+hide stereotype

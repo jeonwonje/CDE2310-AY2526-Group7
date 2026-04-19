@@ -170,29 +170,9 @@ shooter node or `/fire_ball` service.
 
 ## 6  TF Tree
 
-```
-              map
-               │
-               ├── odom
-               │    │
-               │    └── base_footprint
-               │         │
-               │         └── base_link
-               │              │
-               │              ├── base_scan (LiDAR driver)
-               │              │
-               │              └── camera_link  (static, from apriltag_docking)
-               │                   │
-               │                   └── camera  (static optical rotation)
-               │                        │
-               │                        ├── tag36h11:0  (dynamic, from apriltag_ros::AprilTagNode)
-               │                        │    └── nav2_dock_target_0 (static, from apriltag_docking)
-               │                        │
-               │                        └── tag36h11:2  (dynamic, from apriltag_ros::AprilTagNode)
-               │                             └── nav2_dock_target_2 (static, from apriltag_docking)
-               │
-               └── (Cartographer submap frames)
-```
+![Figure 7 — TF Tree](../diagrams/out/07-icd-tf-tree.png)
+
+*Figure 7 — Live TF tree from `ros2 run tf2_tools view_frames`. Source: [`../diagrams/07-icd-tf-tree.puml`](../diagrams/07-icd-tf-tree.puml).*
 
 **Note:** tag36h11 ID 3 is consumed from `/detections` by the delivery server for
 Station B reactive fires and is **not** broadcast as a TF frame.

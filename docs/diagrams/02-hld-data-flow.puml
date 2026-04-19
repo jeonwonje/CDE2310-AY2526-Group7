@@ -1,0 +1,63 @@
+@startuml 02-hld-data-flow
+!include _style.iuml
+
+title <b>Primary Data Flow</b>\n<size:18><color:#5D6D7E>Exploration · Detection · Delivery</color></size>
+
+skinparam ranksep 30
+skinparam nodesep 35
+
+' ============ Sensors ============
+component "LDS-02 LiDAR"       as Lidar  <<io>>
+component "RPi Camera V2"      as Cam    <<io>>
+
+' ============ Navigation lane (Laptop) ============
+package "Navigation lane — Laptop" as NavLane {
+  component "Cartographer SLAM" as Cart
+  component "find_frontiers"    as Find
+  component "score_and_post"    as Score
+  component "Nav2 stack"        as Nav2
+}
+
+' ============ Perception lane (RPi apriltag_docking container) ============
+package "Perception lane — RPi\napriltag_docking container" as PercLane {
+  component "camera_ros\nCameraNode"       as CamNode
+  component "image_proc\nResizeNode"       as Resize
+  component "image_proc\nRectifyNode"      as Rectify
+  component "apriltag_ros\nAprilTagNode"   as Tag
+  component "detected_dock_pose\npublisher_{0,2}" as DockPosePub
+}
+
+' ============ Coordinator + actuators ============
+component "mission_coordinator"   as Coord   <<coord>>
+component "docking_server\n(docker.py)" as Docker <<coord>>
+component "delivery_server"       as Deliver <<delivery>>
+component "OpenCR\nmotor driver"  as OpenCR  <<io>>
+component "MG90 servo\nGPIO 12"   as Servo   <<io>>
+
+' ============ Flow: Nav lane ============
+Lidar   --> Cart    : <size:14>/scan</size>
+Cart    --> Find    : <size:14>/map</size>
+Find    --> Score   : <size:14>frontiers</size>
+Score   --> Nav2    : <size:14>/goal_pose</size>
+Nav2    --> OpenCR  : <size:14>/cmd_vel</size>
+
+' ============ Flow: Perception lane ============
+Cam       --> CamNode : <size:14>CSI raw</size>
+CamNode   --> Resize  : <size:14>/camera/image_raw</size>\n<size:14>1640×1232 BGR888 10 Hz</size>
+Resize    --> Rectify : <size:14>/camera/resized/image_raw</size>\n<size:14>640×480</size>
+Rectify   --> Tag     : <size:14>/camera/resized/image_rect</size>
+Tag       --> DockPosePub : <size:14>TF camera→tag36h11:{0,2}</size>
+
+' ============ Joins at coordinator ============
+Tag          --> Coord  : <size:14>/detections</size>
+DockPosePub  --> Docker : <size:14>/detected_dock_pose_{0,2}</size>
+
+Coord   ..> Docker  : <size:14>/mission_command</size>
+Coord   ..> Deliver : <size:14>/mission_command</size>
+Docker  ..> Coord   : <size:14>/mission_status</size>
+Deliver ..> Coord   : <size:14>/mission_status</size>
+
+Docker  --> OpenCR  : <size:14>/cmd_vel</size>
+Deliver --> Servo   : <size:14>PWM</size>
+
+@enduml

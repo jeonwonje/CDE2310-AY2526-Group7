@@ -25,52 +25,9 @@ The system follows a **two-machine distributed ROS 2** architecture. Compute-
 heavy navigation and planning run on a laptop, while hardware-coupled perception
 and actuation run on the Raspberry Pi mounted to the robot.
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         ROS 2 Humble (CycloneDDS)                           │
-│                                                                             │
-│  ┌──────────── Laptop ─────────────────┐  ┌────────── RPi 4B ───────────┐  │
-│  │                                     │  │                             │  │
-│  │  ┌─────────────────────────┐        │  │  ┌───────────────────────┐  │  │
-│  │  │   Cartographer SLAM     │        │  │  │  turtlebot3_bringup   │  │  │
-│  │  │   /map, /tf             │        │  │  │  (OpenCR, LDS-02)     │  │  │
-│  │  └────────────┬────────────┘        │  │  └───────────────────────┘  │  │
-│  │               │                     │  │                             │  │
-│  │  ┌────────────▼────────────┐        │  │  ┌───────────────────────┐  │  │
-│  │  │   Nav2 stack            │        │  │  │  apriltag_docking     │  │  │
-│  │  │   (planner, controller) │        │  │  │  (vision container +  │  │  │
-│  │  │                         │        │  │  │   dock-pose pubs)     │  │  │
-│  │  └────────────┬────────────┘        │  │  └───────────────────────┘  │  │
-│  │               │                     │  │                             │  │
-│  │  ┌────────────▼────────────┐        │  │  ┌───────────────────────┐  │  │
-│  │  │   auto_explore_v2       │        │  │  │  delivery_server      │  │  │
-│  │  │   (frontiers → goals)   │        │  │  │  (shot orchestration) │  │  │
-│  │  └────────────┬────────────┘        │  │  └───────────────────────┘  │  │
-│  │               │                     │  │                             │  │
-│  │  ┌────────────▼────────────┐        │  │                             │  │
-│  │  │   mission_coordinator   │        │  │                             │  │
-│  │  │   (central FSM)         │        │  │                             │  │
-│  │  └─────────────────────────┘        │  │                             │  │
-│  │                                     │  │                             │  │
-│  │  ┌─────────────────────────┐        │  │                             │  │
-│  │  │   docking_server        │        │  │                             │  │
-│  │  │   (visual servoing)     │        │  │                             │  │
-│  │  └─────────────────────────┘        │  │                             │  │
-│  │                                     │  │                             │  │
-│  │  ┌─────────────────────────┐        │  │                             │  │
-│  │  │   search_stations       │        │  │                             │  │
-│  │  │   (zone sweep + spin)   │        │  │                             │  │
-│  │  └─────────────────────────┘        │  │                             │  │
-│  │                                     │  │                             │  │
-│  │  ┌─────────────────────────┐        │  │                             │  │
-│  │  │   RViz2                 │        │  │                             │  │
-│  │  │   (visualisation)       │        │  │                             │  │
-│  │  └─────────────────────────┘        │  │                             │  │
-│  └─────────────────────────────────────┘  └─────────────────────────────┘  │
-│                                                                             │
-│          ◄─────── CycloneDDS unicast over Wi-Fi ───────►                    │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+![Figure 1 — Architectural Overview](../diagrams/out/01-hld-architectural-overview.png)
+
+*Figure 1 — Two-machine ROS 2 Humble architecture over CycloneDDS. Source: [`../diagrams/01-hld-architectural-overview.puml`](../diagrams/01-hld-architectural-overview.puml).*
 
 ---
 
@@ -104,31 +61,9 @@ src/
 
 ### 4.1  Primary Data Flow (Exploration → Detection → Delivery)
 
-```
- LDS-02 LiDAR         RPi Camera V2
-      │                     │
-      ▼                     ▼
- /scan topic          /camera/image_raw (1640×1232)
-      │                     │
-      ▼                     ▼
- Cartographer         apriltag_docking container
-      │                     │  (resize → rectify → apriltag_ros)
-      ├──► /map             ├──► TF: camera → tag36h11:{0,2}
-      │                     ├──► /detections (AprilTagDetectionArray)
-      │                     ├──► /detected_dock_pose_0 (PoseStamped)
-      │                     └──► /detected_dock_pose_2 (PoseStamped)
-      ▼                     ▼
- find_frontiers       mission_coordinator (TF poll)
-      │                     │
-      ▼                     │ tag seen → interrupt
- score_and_post             │
-      │                     ▼
-      ▼                docking_server
- Nav2 NavigateToPose        │
-      │                     ▼
-      ▼                delivery_server (GPIO 12 → MG90 Servo → Ball)
- /cmd_vel → OpenCR
-```
+![Figure 2 — Primary Data Flow](../diagrams/out/02-hld-data-flow.png)
+
+*Figure 2 — Exploration, detection and delivery data chain across the laptop / RPi split. Source: [`../diagrams/02-hld-data-flow.puml`](../diagrams/02-hld-data-flow.puml).*
 
 ### 4.2  Command / Status Bus
 
@@ -185,34 +120,9 @@ All coordination flows through two JSON-encoded String topics:
 
 ## 6  Hardware-Software Mapping
 
-```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                        TurtleBot3 Burger                                 │
-│                                                                          │
-│  ┌── Layer 4 (Top) ──────────────────────────────────────────────────┐  │
-│  │  RPi Camera V2 ──CSI──► RPi 4B ──USB──► OpenCR                   │  │
-│  │  MG90 servo ◄──GPIO 12 / PWM── RPi 4B                            │  │
-│  └───────────────────────────────────────────────────────────────────┘  │
-│                                                                          │
-│  ┌── Layer 3 ────────────────────────────────────────────────────────┐  │
-│  │  Launcher assembly (spring-loaded plunger, barrel, spur gear)     │  │
-│  │  3D-printed launcher mount v2                                     │  │
-│  └───────────────────────────────────────────────────────────────────┘  │
-│                                                                          │
-│  ┌── Layer 2 ────────────────────────────────────────────────────────┐  │
-│  │  OpenCR board  ──► Dynamixel XL430 (L/R wheels)                   │  │
-│  │  LDS-02 LiDAR (360° scan @ 5 Hz)                                 │  │
-│  └───────────────────────────────────────────────────────────────────┘  │
-│                                                                          │
-│  ┌── Layer 1 (Base) ─────────────────────────────────────────────────┐  │
-│  │  LiPo battery 11.1 V ──► OpenCR ──► 5 V regulated ──► RPi          │  │
-│  │  Dynamixel motors, caster wheel                                   │  │
-│  └───────────────────────────────────────────────────────────────────┘  │
-│                                                                          │
-└──────────────────────────────────────────────────────────────────────────┘
+![Figure 3 — Hardware-Software Mapping](../diagrams/out/03-hld-hardware-software-mapping.png)
 
-           ◄────── Wi-Fi ──────►  Laptop (Nav2, SLAM, Coordinator, RViz)
-```
+*Figure 3 — TurtleBot3 Burger (MeowthBot) layer stack. Source: [`../diagrams/03-hld-hardware-software-mapping.puml`](../diagrams/03-hld-hardware-software-mapping.puml).*
 
 ---
 

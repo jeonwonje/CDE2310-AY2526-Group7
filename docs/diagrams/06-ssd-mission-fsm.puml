@@ -1,0 +1,46 @@
+@startuml 06-ssd-mission-fsm
+!include _style.iuml
+
+title <b>Mission Coordination FSM — mission_coordinator_v3</b>\n<size:18><color:#5D6D7E>1200 s master · 480 s explore timeout · 90 s delivery timeout</color></size>
+
+state "INIT"               as INIT
+state "EXPLORING"          as EXP
+state "DOCKING"            as DOCK  <<coord>>
+state "DELIVERING"         as DEL   <<delivery>>
+state "UNDOCKING"          as UND   <<coord>>
+state "SEARCHING"          as SRCH  <<search>>
+state "MISSION_COMPLETE"   as DONE  <<terminal>>
+state "MISSION_TIMED_OUT"  as TIME  <<fault>>
+
+[*]  --> INIT
+INIT --> EXP : <size:14>start_exploration()</size>
+
+EXP  --> DOCK : <size:14>fresh TF to tag36h11:{0,2}</size>\n<size:14>(age < 0.5 s)</size>
+
+DOCK --> DEL  : <size:14>DOCKING_COMPLETE</size>\n<size:14>&& enable_delivery</size>
+DOCK --> UND  : <size:14>DOCKING_COMPLETE</size>\n<size:14>&& !enable_delivery</size>
+DOCK --> DOCK : <size:14>docking failed /</size>\n<size:14>blacklist 30 s /</size>\n<size:14>resume EXPLORING</size>
+
+DEL  --> UND  : <size:14>DELIVERY_COMPLETE</size>
+DEL  --> UND  : <size:14>delivery_timeout 90 s</size>\n<size:14>— force abandon</size>
+
+UND  --> EXP  : <size:14>UNDOCKING_COMPLETE</size>\n<size:14>&& targets remain</size>\n<size:14>&& map incomplete</size>
+UND  --> SRCH : <size:14>UNDOCKING_COMPLETE</size>\n<size:14>&& targets remain</size>\n<size:14>&& search_active</size>
+UND  --> DONE : <size:14>UNDOCKING_COMPLETE</size>\n<size:14>&& all targets docked</size>\n<size:14>&& map complete</size>
+
+EXP  --> SRCH : <size:14>initial_exploration_timeout</size>\n<size:14>(480 s) elapsed</size>
+
+SRCH --> DOCK : <size:14>fresh TF acquired</size>\n<size:14>during sweep</size>
+SRCH --> EXP  : <size:14>SEARCH_FAILED</size>\n<size:14>&& missing targets</size>
+SRCH --> DONE : <size:14>SEARCH_FAILED</size>\n<size:14>&& all processed</size>
+
+EXP  --> TIME : <size:14>master_mission_timeout (1200 s)</size>
+DOCK --> TIME : <size:14>master_mission_timeout</size>
+DEL  --> TIME : <size:14>master_mission_timeout</size>
+UND  --> TIME : <size:14>master_mission_timeout</size>
+SRCH --> TIME : <size:14>master_mission_timeout</size>
+
+DONE --> [*]
+TIME --> [*]
+
+@enduml

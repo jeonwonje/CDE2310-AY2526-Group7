@@ -1,32 +1,32 @@
 @startuml 01-hld-architectural-overview
 !include _style.iuml
 
-title <b><size:24>Architectural Overview</size></b>\n<size:16>Two-machine ROS 2 Humble workspace, CycloneDDS unicast over Wi-Fi</size>
+title <b>Architectural Overview</b>\n<size:18><color:#5D6D7E>Two-machine ROS 2 Humble · CycloneDDS unicast over Wi-Fi</color></size>
 
-skinparam componentStyle rectangle
+left to right direction
 
-node "Laptop" as Laptop {
-  component "Cartographer SLAM\n/map, /tf" as Cart
-  component "Nav2 stack\nplanner + controller" as Nav2
-  component "auto_explore_v2\nfrontiers → goals" as Explore
-  component "mission_coordinator\ncentral FSM" as Coord #E8DAEF
-  component "docking_server\ndocker.py" as Dock #E8DAEF
-  component "search_stations\nzone sweep + 360° spin" as Search #FDEBD0
-  component "RViz2\nvisualisation" as RViz #F7F7F7
+node "<$linux>  Laptop" as Laptop {
+  component "Cartographer SLAM"     as Cart
+  component "Nav2 stack"            as Nav2
+  component "auto_explore_v2"       as Explore
+  component "mission_coordinator"   as Coord  <<coord>>
+  component "docking_server"        as Dock   <<coord>>
+  component "search_stations"       as Search <<search>>
+  component "RViz2"                 as RViz   <<io>>
 
-  Cart -down-> Nav2
-  Nav2 -down-> Explore
-  Explore -down-> Coord
-  Coord ..> Dock : /mission_command
-  Coord ..> Search : /mission_command
+  Cart    --> Nav2
+  Nav2    --> Explore
+  Explore --> Coord
+  Coord   ..> Dock   : <size:14>/mission_command</size>
+  Coord   ..> Search : <size:14>/mission_command</size>
 }
 
-node "Raspberry Pi 4B" as RPi {
-  component "turtlebot3_bringup\nOpenCR + LDS-02" as Bringup
-  component "apriltag_docking\nvision container +\ndock-pose pubs" as Apriltag
-  component "delivery_server\nshot orchestration\nMG90 servo · GPIO 12" as Delivery #FADBD8
+node "<$raspberrypi>  Raspberry Pi 4B" as RPi {
+  component "turtlebot3_bringup"    as Bring
+  component "apriltag_docking"      as Atag
+  component "delivery_server"       as Deliver <<delivery>>
 }
 
-Laptop <-down-> RPi : <b>CycloneDDS unicast</b>\nover Wi-Fi
+Laptop -right[#2E86C1,thickness=2]-> RPi : <b>CycloneDDS</b>\n<size:14>Wi-Fi unicast</size>
 
 @enduml

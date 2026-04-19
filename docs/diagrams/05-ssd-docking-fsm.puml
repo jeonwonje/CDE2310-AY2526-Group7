@@ -1,0 +1,48 @@
+@startuml 05-ssd-docking-fsm
+!include _style.iuml
+
+title <b>Docking FSM — docker.py</b>\n<size:18><color:#5D6D7E>Geometric visual servoing · staging 0.40 m · stop 0.10 m</color></size>
+
+state "IDLE"              as IDLE
+state "NAV_TO_STAGING"    as NAV
+state "COMPUTE_GEOMETRY"  as COMP
+state "INTERCEPT"         as INT
+state "SQUARE_UP"         as SQU
+state "EVALUATE_POSITION" as EVAL
+state "RETRY_BACKUP"      as RB   <<fault>>
+state "FINAL_PLUNGE"      as FIN
+state "UNDOCKING"         as UND  <<coord>>
+
+[*] --> IDLE
+
+IDLE --> NAV   : <size:14>START_DOCKING</size>\n<size:14>(from /mission_command)</size>
+IDLE --> COMP  : <size:14>already within</size>\n<size:14>staging + 0.20 m</size>
+IDLE --> UND   : <size:14>START_UNDOCKING</size>
+
+NAV  --> COMP  : <size:14>Nav2 SUCCEEDED</size>\n<size:14>or 60 s deadlock</size>
+NAV  --> IDLE  : <size:14>Nav2 rejected (fallback exhausted)</size>\n<size:14>DOCKING_FAILED</size>
+
+COMP --> INT   : <size:14>cache initial_x</size>
+
+INT  --> SQU   : <size:14>|Y err| ≤ 0.03 m</size>\n<size:14>or x < 0.3·staging</size>
+SQU  --> EVAL  : <size:14>|yaw err| ≤ 0.05 rad</size>
+
+EVAL --> FIN   : <size:14>|Y err| ≤ 0.40 m</size>
+EVAL --> RB    : <size:14>|Y err| > 0.40 m &&</size>\n<size:14>runway too short</size>
+EVAL --> COMP  : <size:14>|Y err| > 0.40 m &&</size>\n<size:14>runway sufficient (retry)</size>
+EVAL --> FIN   : <size:14>retries exhausted</size>\n<size:14>(plunge anyway)</size>
+
+RB   --> COMP  : <size:14>backup 2.0 s</size>\n<size:14>or x ≥ 0.7·staging</size>
+
+FIN  --> IDLE  : <size:14>x − stop ≤ 0.01 m</size>\n<size:14>DOCKING_COMPLETE</size>
+
+UND  --> IDLE  : <size:14>0.20 m reversed</size>\n<size:14>UNDOCKING_COMPLETE</size>
+
+IDLE --> [*]   : <size:14>docking complete /</size>\n<size:14>docking failed →</size>\n<size:14>mission_coordinator</size>
+
+note right of COMP
+  Master stopwatch: <b>180 s</b>
+  hard abort if exceeded
+end note
+
+@enduml
