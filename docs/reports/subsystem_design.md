@@ -350,7 +350,8 @@ to pre-computed zones and spin to scan for the missing tag.
    anchored to the robot's start position.
 2. For each zone:
    a. Snap the zone coordinate to the nearest free cell on the occupancy grid
-      (within `max_safe_search_radius` = 1.5 m).
+      (within `max_safe_search_radius` = 0.6 m; reduced from 1.5 m to
+      avoid snapping into far-away free space during mid-arena recovery).
    b. Navigate to the safe cell via Nav2 `NavigateToPose`.
    c. On arrival (within `arrival_tolerance` = 0.4 m), spin 360° (0.5 rad/s × 13 s).
    d. If a tag interrupt occurs during spin, abort search.
@@ -361,7 +362,7 @@ to pre-computed zones and spin to scan for the missing tag.
 | Parameter              | Value     | Unit  | Description                    |
 |------------------------|-----------|-------|--------------------------------|
 | relative_search_offsets| [(-0.75,-0.3),(1.25,2.7)] | m | Offsets from start pose |
-| max_safe_search_radius | 1.5       | m     | Max snap distance for free cell|
+| max_safe_search_radius | 0.6       | m     | Max snap distance for free cell|
 | spin_velocity          | 0.5       | rad/s | Rotation speed for scan        |
 | spin_duration          | 13.0      | s     | Duration (covers > 360°)       |
 | max_nav_retries        | 3         | —     | Nav2 retry limit per zone      |
