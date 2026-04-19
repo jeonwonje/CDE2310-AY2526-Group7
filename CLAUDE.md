@@ -45,11 +45,11 @@ source install/setup.bash                 # overlay
 | Branch | Purpose |
 |---|---|
 | `main` | Protected. Merges via PR only. |
-| `dev/jeon` | Jeon Won Je — systems lead |
-| `dev/clara` | Clara — perception |
-| `dev/kumaresan` | Kumaresan — navigation |
-| `dev/shashwat` | Shashwat — launcher |
-| `dev/daniel` | Daniel — integration |
+| `dev/jeon` | Jeon Won Je — lead; final integration, nav tuning, manufacturing |
+| `dev/shashwat` | Shashwat — mission coordinator, docking, perception |
+| `dev/kuga` | Kuga — navigation core |
+| `dev/clara` | Clara — delivery server, perception |
+| `dev/daniel` | Daniel — mechanical subsystem |
 
 **Never commit directly to main.** Always work on `dev/<name>`, then open a PR.
 

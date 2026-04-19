@@ -5,7 +5,7 @@
 | Document ID    | AMR-SSD-001                                        |
 | Version        | 1.0                                                |
 | Date           | 2026-04-13                                         |
-| Author(s)      | Group 7 — Jeon, Kumaresan, Clara, Shashwat, Daniel |
+| Author(s)      | Group 7 — Jeon, Shashwat, Kuga, Clara, Daniel |
 | Module         | CDE2310 Engineering Systems Design                 |
 | Status         | Baselined for G2                                   |
 
@@ -26,7 +26,7 @@ parameters, state machines, and ROS 2 interfaces.
 
 #### 2.1.1  Exploration — `auto_explore_v2`
 
-**Owner:** Kumaresan
+**Owner:** Kuga (navigation core)
 
 **Purpose:** Autonomously cover the maze by repeatedly selecting and navigating
 to the most promising frontier.
@@ -86,7 +86,7 @@ are recoverable from git history (commit `044e346`).*
 
 ### 2.2  Perception Subsystem — `apriltag_docking`
 
-**Owner:** Clara (integration, calibration, configuration)
+**Owners:** Shashwat and Clara (shared — integration, calibration, configuration)
 
 **Purpose:** Detect tag36h11 AprilTag markers in the RPi camera feed, compute
 6-DOF poses, and broadcast the resulting transforms plus Nav2-consumable
@@ -194,7 +194,7 @@ output is `/cmd_vel` twists plus one Nav2 `NavigateToPose` call per dock.
 
 ### 2.4  Delivery Subsystem
 
-**Owner:** Clara (launcher), Jeon (delivery_server)
+**Owner:** Clara (delivery server + launcher integration)
 
 #### 2.4.1  delivery_server (`CDE2310_AMR_Trial_Run/delivery_server_consolidated.py`)
 
@@ -234,7 +234,7 @@ out of the barrel via a gravity-fed tube (7-ball capacity).
 
 ### 2.5  Mission Coordination — `mission_coordinator_v3`
 
-**Owner:** Kumaresan (v1–v3), Jeon (robustness patches)
+**Owner:** Shashwat (current). Historical authorship: Kuga (v1–v3), Jeon (robustness patches).
 
 **Purpose:** Central FSM that orchestrates all subsystems and manages the
 mission lifecycle.
@@ -272,7 +272,7 @@ against the timeout behaviour in the requirements document to reflect this.
 
 ### 2.6  Search Subsystem — `search_stations`
 
-**Owner:** Kumaresan
+**Owner:** Kuga (navigation core)
 
 **Purpose:** When exploration is complete but tags remain un-serviced, navigate
 to pre-computed zones and spin to scan for the missing tag.

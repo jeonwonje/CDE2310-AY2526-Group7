@@ -5,7 +5,7 @@
 | Document ID    | AMR-ICD-001                                        |
 | Version        | 1.0                                                |
 | Date           | 2026-04-13                                         |
-| Author(s)      | Group 7 — Jeon, Kumaresan, Clara, Shashwat, Daniel |
+| Author(s)      | Group 7 — Jeon, Shashwat, Kuga, Clara, Daniel |
 | Module         | CDE2310 Engineering Systems Design                 |
 | Status         | Baselined for G2                                   |
 

@@ -12,7 +12,7 @@ Quick reference for AI assistants (Copilot, Claude, ChatGPT) working in this rep
 ## Branch Workflow
 
 - Pull latest main before starting: `git pull origin main`
-- Work on `dev/<name>` only (dev/jeon, dev/clara, dev/kumaresan, dev/shashwat, dev/daniel)
+- Work on `dev/<name>` only (dev/jeon, dev/shashwat, dev/kuga, dev/clara, dev/daniel)
 - Push to your branch, open PR targeting `main`, tag @jeonwonje as reviewer
 
 ## Commit Format

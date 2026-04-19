@@ -61,11 +61,11 @@ See the [End User Documentation](docs/end_user_doc/EndUserDocumentation_Group7.m
 
 | Member | Role | Branch |
 |---|---|---|
-| Jeon Won Je | Systems lead, manufacturing, delivery server | `dev/jeon` |
-| Clara Ong | Perception integration (`apriltag_docking`), launcher hardware | `dev/clara` |
-| Kumaresan | Navigation, exploration, mission coordination | `dev/kumaresan` |
-| Shashwat Gupta | Docking server, launcher mechanism, `apriltag_docking` | `dev/shashwat` |
-| Daniel Yow | Mechanical subsystems, CAD, hardware documentation | `dev/daniel` |
+| Jeon Won Je | Lead — final system integration, nav tuning, manufacturing | `dev/jeon` |
+| Shashwat Gupta | Mission coordinator, docking, perception | `dev/shashwat` |
+| Kuga | Navigation core | `dev/kuga` |
+| Clara Ong | Delivery server, perception | `dev/clara` |
+| Daniel Yow | Mechanical subsystem (hardware, CAD, manufacturing docs) | `dev/daniel` |
 
 ---
 

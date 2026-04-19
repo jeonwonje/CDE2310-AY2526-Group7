@@ -5,7 +5,7 @@
 | Document ID    | AMR-SDP-001                                        |
 | Version        | 1.0                                                |
 | Date           | 2026-04-13                                         |
-| Author(s)      | Group 7 — Jeon, Kumaresan, Clara, Shashwat, Daniel |
+| Author(s)      | Group 7 — Jeon, Shashwat, Kuga, Clara, Daniel |
 | Module         | CDE2310 Engineering Systems Design                 |
 | Status         | Baselined for G2                                   |
 
@@ -142,10 +142,10 @@ Group7_AMR/
 ```
 main                      ← stable releases only
   │
-  ├── dev/jeon            ← Jeon's development branch
-  ├── dev/kumaresan       ← Kumaresan's development branch
-  ├── dev/clara           ← Clara's development branch
+  ├── dev/jeon            ← Jeon's development branch (lead)
   ├── dev/shashwat        ← Shashwat's development branch
+  ├── dev/kuga            ← Kuga's development branch
+  ├── dev/clara           ← Clara's development branch
   └── dev/daniel          ← Daniel's development branch
 ```
 

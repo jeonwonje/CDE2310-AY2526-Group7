@@ -96,11 +96,11 @@ Requirements are written as unambiguous, singular, verifiable "shall" statements
 |---|---|---|
 | NUS EDIC Panel (Module Instructors) | Mission authority, evaluation panel | Mission success rate, design rigour, adherence to V-model process, safety compliance |
 | Group 7 Engineering Team | Designers, builders, and operators | Feasibility, integration risk, manageable schedule, clear work division |
-| Jeon Won Je | Systems lead, delivery server, CAD assembly | System-level coherence, reliable delivery logic, clean integration |
-| Kumaresan | Navigation, frontier exploration, mission coordination | Robust autonomous exploration, accurate goal selection |
-| Clara Ong | Perception integration (`apriltag_docking`), launcher hardware | Reliable AprilTag detection, reactive firing logic |
-| Shashwat Gupta | Docking system, launcher mechanism | Precise docking alignment, reliable mechanical launcher |
-| Daniel Yow | Integration, CAD (launcher assembly, mounts) | Manufacturable parts, clean mechanical-electrical interfaces |
+| Jeon Won Je | Lead — final system integration, nav tuning, manufacturing | System-level coherence, reliable integration, clean nav behaviour |
+| Shashwat Gupta | Mission coordinator, docking, perception | Reliable mission FSM, precise docking alignment, trustworthy AprilTag detection |
+| Kuga | Navigation core | Robust autonomous exploration, accurate goal selection |
+| Clara Ong | Delivery server, perception | Reliable delivery logic, reactive firing, AprilTag integration |
+| Daniel Yow | Mechanical subsystem (CAD, manufacturing, mounts) | Manufacturable parts, clean mechanical-electrical interfaces |
 | Mission Organisers | Field layout, scoring criteria, rail operation | Compliance with mission brief, fair assessment conditions |
 | Future CDE2310 Cohorts | Potential re-users of design documentation | Documentation clarity, reproducibility of results |
 
@@ -236,7 +236,7 @@ Each concept is scored 1–5 against each criterion (5 = best). The weighted tot
 
 ### 5.3 BOGAT Outcomes and Rationale
 
-The team reviewed all three concepts with cross-disciplinary input from mechanical (Shashwat, Daniel), software/controls (Jeon, Kumaresan, Clara), and integration perspectives. Key discussion points included:
+The team reviewed all three concepts with cross-disciplinary input from mechanical (Daniel), software/controls (Jeon, Shashwat, Kuga, Clara), and integration perspectives. Key discussion points included:
 
 - **Determinism was the decisive factor.** The spring-plunger mechanism stores a fixed amount of energy (½kx²) and releases it identically each cycle. The flywheel concept's friction-dependent grip on a 2.7 g ball introduced unacceptable variability in exit velocity. The pneumatic concept's sealing tolerances made pressure consistency difficult to guarantee.
 - **Manufacturability strongly favoured Concept A.** The barrel, plunger, and rack-and-pinion gears are straightforward FDM prints. The flywheel concept requires precise wheel spacing and balanced motors. The pneumatic concept requires airtight seals — difficult to achieve with FDM.
@@ -354,8 +354,8 @@ The system integrates a rack-and-pinion servo-driven spring release, a 7-ball gr
 
 | Member | Responsibility |
 |---|---|
-| Jeon Won Je | Systems integration, delivery server node, CAD assembly review |
-| Kumaresan | Navigation stack, frontier exploration, mission coordinator |
-| Clara Ong | Perception integration (`apriltag_docking` package), launcher hardware |
-| Shashwat Gupta | Docking server, launcher mechanical assembly and tuning |
-| Daniel Yow | CAD finalisation (launcher assembly, TurtleBot3 mounts), 3D printing |
+| Jeon Won Je | Final system integration, nav tuning, manufacturing (lead) |
+| Shashwat Gupta | Mission coordinator, docking server, perception integration |
+| Kuga | Navigation core — exploration, frontier search, goal selection |
+| Clara Ong | Delivery server, perception (`apriltag_docking`) |
+| Daniel Yow | Mechanical subsystem — CAD finalisation, 3D printing, hardware docs |
