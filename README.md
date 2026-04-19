@@ -62,8 +62,8 @@ See the [End User Documentation](docs/end_user_doc/EndUserDocumentation_Group7.m
 | Member | Role | Branch |
 |---|---|---|
 | Jeon Won Je | Lead — final system integration, nav tuning, manufacturing | `dev/jeon` |
-| Shashwat Gupta | Mission coordinator, docking, perception | `dev/shashwat` |
-| Kuga | Navigation core | `dev/kuga` |
+| Shashwat Gupta | Mission coordinator, docking, perception, Navigation | `dev/shashwat` |
+| Kuga | Navigation and Exploration | `dev/kuga` |
 | Clara Ong | Delivery server, perception | `dev/clara` |
 | Daniel Yow | Mechanical subsystem (hardware, CAD, manufacturing docs) | `dev/daniel` |
 
